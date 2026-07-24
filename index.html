@@ -1,0 +1,611 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Run Planner Map</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<style>
+  :root{--ink:#17211b;--muted:#657268;--line:#dbe5dd;--soft:#f4f8f4;--panel:#fffef9;--route:#1f8fff;--mint:#22c55e;--sun:#f59e0b;--coral:#ef5f4a;--panel-shift:-430px;}
+  *{box-sizing:border-box;margin:0;padding:0;}
+  html,body{width:100%;height:100%;overflow:hidden;background:#eaf4ef;color:var(--ink);font-family:Arial,Helvetica,sans-serif;}
+  button,input{font:inherit;color:var(--ink);}
+  #map{position:fixed;inset:0;width:100vw;height:100dvh;background:#fff;}
+  .leaflet-container{font:inherit;}
+  .leaflet-control-attribution{font-size:10px;}
+  .drawer{--tab-width:44px;--tab-height:112px;position:fixed;left:0;top:14px;z-index:1000;width:min(420px,calc(100vw - 76px));filter:drop-shadow(0 18px 50px rgba(30,45,36,.22));transition:transform .28s cubic-bezier(.2,.8,.2,1);}
+  .drawer::before{content:"";position:absolute;left:0;top:0;z-index:4;width:100%;height:7px;border-radius:28px 0 0 0;background:linear-gradient(90deg,var(--mint),var(--route),var(--sun),var(--coral));pointer-events:none;}
+  .drawer.closed{transform:translateX(var(--panel-shift));}
+  .drawer-tab{position:absolute;top:0;right:calc(0px - var(--tab-width));z-index:2;display:flex;align-items:center;justify-content:center;border:1px solid rgba(255,255,255,.75);border-left:0;border-radius:0 22px 22px 0;background:linear-gradient(180deg,#17211b,#1b6f64);color:#fff;width:var(--tab-width);height:var(--tab-height);padding:7px 0 0;font-size:26px;font-weight:900;line-height:1;cursor:pointer;backdrop-filter:blur(14px);}
+  .drawer-tab:hover{background:linear-gradient(180deg,#22322a,#16857a);}
+  .panel{position:relative;width:100%;max-height:calc(100dvh - 28px);overflow:auto;border:1px solid rgba(255,255,255,.75);border-radius:28px 0 28px 28px;background:rgba(255,254,249,.94);box-shadow:none;backdrop-filter:blur(14px);}
+  .panel-inner{display:grid;gap:12px;padding:23px 14px 14px;}
+  .pane-block{display:grid;gap:12px;border:1px solid rgba(219,229,221,.9);border-radius:22px;background:rgba(255,255,255,.76);padding:12px;box-shadow:0 8px 22px rgba(30,45,36,.08);}
+  .route-panel{background:linear-gradient(180deg,#fffef9,#f3fbf5);}
+  .filter-panel{background:linear-gradient(180deg,#ffffff,#f7f9ff);}
+  .results-panel{background:linear-gradient(135deg,#effaf3,#edf6ff);border-color:#d7e8dd;}
+  .topline{display:flex;justify-content:space-between;align-items:flex-start;gap:14px;padding-bottom:4px;}
+  h1{font-size:23px;line-height:1.05;letter-spacing:.01em;}
+  .title-area{display:grid;gap:8px;}
+  .lang-switch{display:inline-grid;grid-template-columns:1fr 1fr;width:132px;border-radius:999px;background:#e8f0ea;padding:3px;}
+  .lang-switch button{border:0;border-radius:999px;background:transparent;min-height:30px;font-size:12px;font-weight:900;cursor:pointer;color:#52645a;}
+  .lang-switch button.active{background:var(--ink);color:#fff;}
+  .meta{font-size:11px;color:var(--muted);text-align:right;line-height:1.25;}
+  .control{display:grid;gap:4px;}
+  label{font-size:10px;text-transform:uppercase;letter-spacing:.06em;font-weight:800;}
+  input{width:100%;border:1px solid var(--line);border-radius:15px;background:#fff;padding:10px 12px;min-height:42px;box-shadow:inset 0 1px 0 rgba(255,255,255,.7);}
+  input:focus{outline:3px solid rgba(34,197,94,.2);border-color:#5fcf83;}
+  .row{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+  .actions{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+  .btn{border:0;border-radius:16px;background:#fff;padding:10px;min-height:42px;cursor:pointer;font-size:14px;font-weight:900;box-shadow:0 6px 18px rgba(30,45,36,.1);}
+  .btn:hover{transform:translateY(-1px);}
+  .btn.primary{background:linear-gradient(135deg,#16a34a,#20c997);color:#fff;}
+  .btn.accent{background:linear-gradient(135deg,#ff7a59,#f59e0b);color:#fff;}
+  .btn.ghost{background:#eef6f0;color:#274334;}
+  .chips{display:flex;gap:7px;flex-wrap:wrap;}
+  .brand-tabs{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;}
+  .chip{position:relative;display:inline-flex;align-items:center;justify-content:center;gap:7px;border:1px solid transparent;border-radius:999px;background:#eef4ef;color:#435348;padding:8px 10px;min-height:36px;font-size:12px;font-weight:900;cursor:pointer;user-select:none;transition:background .18s ease,color .18s ease,box-shadow .18s ease;}
+  .chip.active{background:#17211b;color:#fff;box-shadow:0 8px 20px rgba(23,33,27,.16);}
+  .chip input{position:absolute;opacity:0;pointer-events:none;}
+  .chip span{display:inline-flex;align-items:center;gap:5px;}
+  .dot{width:10px;height:10px;border:1px solid var(--ink);border-radius:50%;display:inline-block;}
+  .chip.active .dot{border-color:#fff;}
+  .brand-key{display:grid;grid-template-columns:1fr;gap:6px;border-radius:18px;background:linear-gradient(135deg,#f7fbf8,#fff7e8);padding:10px;border:1px solid #edf1e9;}
+  .brand-key-row{display:flex;align-items:center;gap:8px;font-size:12px;color:#405146;}
+  .brand-key-code{min-width:28px;font-weight:900;}
+  .filter-hint{border-top:1px solid #e5eee8;padding-top:8px;font-size:11px;color:#5d6f64;line-height:1.35;}
+  .status{font-size:12px;color:var(--muted);min-height:18px;}
+  .stats{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;}
+  .stat{border:1px solid #e3ebe5;border-radius:18px;background:linear-gradient(180deg,#fff,#f3faf5);padding:10px;}
+  .stat b{display:block;font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:2px;}
+  .stat span{font-size:18px;font-weight:900;}
+  .marker{width:24px;height:24px;border:2px solid #fff;border-radius:50%;color:#fff;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:900;box-shadow:0 3px 10px rgba(0,0,0,.28);}
+  .brand-af{background:#7b1fa2;}
+  .brand-wg{background:#006323;}
+  .brand-cr{background:#d97706;}
+  .popup{min-width:210px;max-width:280px;border-radius:18px;}
+  .popup b{display:block;font-size:14px;margin-bottom:4px;}
+  .popup p{font-size:12px;margin:0 0 6px;color:#333;}
+  .popup a{display:inline-flex;margin-right:10px;font-size:12px;color:#050505;font-weight:800;}
+  html[lang="ja"] .btn.primary,html[lang="ja"] .btn.accent,html[lang="ja"] .chip.active,html[lang="ja"] .lang-switch button.active{font-weight:700;text-shadow:0 1px 2px rgba(0,0,0,.24);}
+  html[lang="ja"] .btn,html[lang="ja"] .chip{font-weight:700;}
+  @media(max-width:700px){
+    .drawer{--tab-width:40px;--tab-height:96px;left:0;top:calc(8px + env(safe-area-inset-top));width:calc(100vw - 54px);}
+    .drawer::before{border-radius:24px 0 0 0;}
+    .drawer-tab{border-radius:0 18px 18px 0;font-size:22px;}
+    .panel{max-height:52dvh;border-radius:24px 0 24px 24px;}
+    .panel-inner{gap:10px;padding:19px 10px 10px;}
+    .pane-block{gap:10px;border-radius:20px;padding:10px;}
+    .topline{align-items:center;}
+    h1{font-size:19px;}
+    .lang-switch{width:112px;}
+    .actions{grid-template-columns:repeat(2,1fr);}
+    .btn{font-size:12px;padding:7px 5px;}
+    .brand-tabs{grid-template-columns:1fr;}
+    .stats{grid-template-columns:repeat(3,1fr);}
+  }
+</style>
+</head>
+<body>
+<div id="map" aria-label="Run planner map"></div>
+<div class="drawer open" id="drawer">
+  <section class="panel" aria-label="Run planner controls">
+    <div class="panel-inner">
+      <div class="pane-block route-panel">
+        <div class="topline">
+          <div class="title-area">
+            <h1 id="titleText">Run Planner</h1>
+            <div class="lang-switch" aria-label="Language">
+              <button type="button" id="langEn" class="active">EN</button>
+              <button type="button" id="langJa">日本語</button>
+            </div>
+          </div>
+          <div class="meta"><span id="updatedLabel">Loading</span><br><span id="sourceLabel"></span></div>
+        </div>
+        <div class="control">
+          <label for="locationInput" id="centerLabel">Center coordinates</label>
+          <input id="locationInput" type="text" value="35.562641,139.687246" autocomplete="off">
+        </div>
+        <div class="row">
+          <div class="control">
+            <label for="radiusInput" id="radiusLabel">Radius km</label>
+            <input id="radiusInput" type="number" min="0.1" max="100" step="0.1" value="2">
+          </div>
+          <div class="control">
+            <label for="paceInput" id="paceLabel">Pace min/km</label>
+            <input id="paceInput" type="text" value="8:00">
+          </div>
+        </div>
+        <div class="actions">
+          <button class="btn ghost" id="loadBtn">Coords</button>
+          <button class="btn primary" id="gpsBtn">GPS</button>
+        </div>
+      </div>
+      <div class="pane-block filter-panel">
+        <div class="control">
+          <label id="brandsLabel">Brands</label>
+          <div class="chips brand-tabs" id="brandFilters"></div>
+          <div class="brand-key" id="brandKey"></div>
+        </div>
+        <div class="control">
+          <label id="areasLabel">Areas</label>
+          <div class="chips" id="areaFilters"></div>
+        </div>
+        <div class="filter-hint" id="filterHint">Click selected filters to unselect.</div>
+      </div>
+      <div class="pane-block results-panel">
+        <div class="stats">
+          <div class="stat"><b id="storesStatLabel">Stores</b><span id="storeCount">0</span></div>
+          <div class="stat"><b id="radiusStatLabel">Radius</b><span id="radiusMetric">-</span></div>
+          <div class="stat"><b id="loopStatLabel">Loop</b><span id="timeMetric">-</span></div>
+        </div>
+        <div class="status" id="status"></div>
+      </div>
+    </div>
+  </section>
+  <button class="drawer-tab" id="drawerToggle" type="button" aria-expanded="true">
+    <span id="drawerToggleText">&lt;</span>
+  </button>
+</div>
+
+<script src="./locations.js"></script>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+const DATA = window.RUN_PLANNER_DATA || {locations:[], areas:[], counts:{byBrand:{}, byArea:{}}};
+const DEFAULT_CENTER = {lat:35.562641,lng:139.687246};
+const GSI_TILE_URL = "https://cyberjapandata.gsi.go.jp/xyz/std/{z}/{x}/{y}.png";
+const GSI_ATTRIBUTION = '<a href="https://maps.gsi.go.jp/development/ichiran.html">地理院タイル</a>';
+const BRAND_META = {
+  "Anytime Fitness": {short:"AF", className:"brand-af", labels:{en:"Anytime Fitness", ja:"エニタイムフィットネス"}},
+  "WithGreen": {short:"WG", className:"brand-wg", labels:{en:"WithGreen", ja:"ウィズグリーン"}},
+  "CRISP": {short:"CR", className:"brand-cr", labels:{en:"CRISP SALAD WORKS", ja:"クリスプ・サラダワークス"}}
+};
+const AREA_LABELS = {
+  en: {"東京都":"Tokyo","神奈川県":"Kanagawa","埼玉県":"Saitama","千葉県":"Chiba","栃木県":"Tochigi"},
+  ja: {"東京都":"東京都","神奈川県":"神奈川県","埼玉県":"埼玉県","千葉県":"千葉県","栃木県":"栃木県"}
+};
+const I18N = {
+  en: {
+    docTitle:"Run Planner Map",
+    mapLabel:"Run planner map",
+    panelLabel:"Run planner controls",
+    languageLabel:"Language",
+    title:"Run 🏃 Planner",
+    loading:"Loading",
+    staticData:"Static data",
+    updated:"Updated",
+    stores:"stores",
+    centerLabel:"Center coordinates",
+    radiusLabel:"Radius km",
+    paceLabel:"Pace min/km",
+    coordsButton:"Center map",
+    gpsButton:"GPS",
+    openPanel:"Open planner",
+    hidePanel:"Close planner",
+    brandsLabel:"Brands",
+    areasLabel:"Areas",
+    filterHint:"Click selected filters to unselect.",
+    storesStat:"Stores",
+    radiusStat:"Radius",
+    loopStat:"Loop",
+    clickPrompt:"Click the map to place the route center.",
+    visibleStatus:(visible,total)=>`${visible} visible / ${total} total`,
+    noVisibleStores:"No visible stores",
+    coordsRequired:"Coordinates required",
+    coordsFormat:"Use latitude,longitude",
+    centerLoaded:"Center loaded",
+    centerFailed:"Center failed",
+    gpsUnavailable:"GPS unavailable",
+    locating:"Locating",
+    gpsSet:"GPS center set",
+    gpsFailed:"GPS failed",
+    centerMoved:"Center moved",
+    mapFailed:"Map library failed",
+    status:"Status",
+    phone:"Phone",
+    map:"Map",
+    source:"Source"
+  },
+  ja: {
+    docTitle:"ランニングプランナーマップ",
+    mapLabel:"ランニングプランナーマップ",
+    panelLabel:"ランニングプランナー操作",
+    languageLabel:"言語",
+    title:"ランニング🏃プランナー",
+    loading:"読み込み中",
+    staticData:"静的データ",
+    updated:"更新",
+    stores:"店舗",
+    centerLabel:"中心座標",
+    radiusLabel:"半径 km",
+    paceLabel:"ペース 分/km",
+    coordsButton:"地図の中心を移動",
+    gpsButton:"現在地",
+    openPanel:"プランナーを開く",
+    hidePanel:"プランナーを閉じる",
+    brandsLabel:"ブランド",
+    areasLabel:"エリア",
+    filterHint:"選択中の項目をクリックすると解除できます。",
+    storesStat:"店舗",
+    radiusStat:"半径",
+    loopStat:"周回",
+    clickPrompt:"地図をクリックして中心を設定します。",
+    visibleStatus:(visible,total)=>`${visible}件表示 / 全${total}件`,
+    noVisibleStores:"表示中の店舗がありません",
+    coordsRequired:"座標を入力してください",
+    coordsFormat:"緯度,経度 の形式で入力してください",
+    centerLoaded:"中心を読み込みました",
+    centerFailed:"中心の読み込みに失敗しました",
+    gpsUnavailable:"GPSが利用できません",
+    locating:"現在地を取得中",
+    gpsSet:"現在地を中心に設定しました",
+    gpsFailed:"GPSの取得に失敗しました",
+    centerMoved:"中心を移動しました",
+    mapFailed:"地図ライブラリを読み込めませんでした",
+    status:"状態",
+    phone:"電話",
+    map:"地図",
+    source:"ホームページ"
+  }
+};
+const state = {
+  lat:DEFAULT_CENTER.lat,
+  lng:DEFAULT_CENTER.lng,
+  radiusKm:2,
+  brands:new Set(Object.keys(BRAND_META)),
+  areas:new Set(DATA.areas || []),
+  lang:localStorage.getItem("runPlannerLang") === "ja" ? "ja" : "en",
+  lastStatusKey:"clickPrompt",
+  lastStatusArgs:[]
+};
+let map, centerMarker, routeCircle, markerLayer;
+
+const locationInput = document.getElementById("locationInput");
+const radiusInput = document.getElementById("radiusInput");
+const paceInput = document.getElementById("paceInput");
+const drawer = document.getElementById("drawer");
+const drawerToggle = document.getElementById("drawerToggle");
+const drawerToggleText = document.getElementById("drawerToggleText");
+const statusEl = document.getElementById("status");
+const storeCountEl = document.getElementById("storeCount");
+const radiusMetric = document.getElementById("radiusMetric");
+const timeMetric = document.getElementById("timeMetric");
+
+function t(key, ...args){
+  const value = I18N[state.lang][key] ?? I18N.en[key] ?? key;
+  return typeof value === "function" ? value(...args) : value;
+}
+
+function setStatusKey(key, ...args){
+  state.lastStatusKey = key;
+  state.lastStatusArgs = args;
+  statusEl.textContent = t(key, ...args);
+}
+
+function setStatusText(text){
+  state.lastStatusKey = "";
+  state.lastStatusArgs = [];
+  statusEl.textContent = text || "";
+}
+
+function formatDate(value){
+  const date = new Date(value);
+  if(Number.isNaN(date.getTime())) return t("staticData");
+  const locale = state.lang === "ja" ? "ja-JP" : undefined;
+  return `${t("updated")} ${date.toLocaleString(locale, {month:"short", day:"numeric", hour:"2-digit", minute:"2-digit"})}`;
+}
+
+function formatKm(value){
+  const number = Number(value) || 0;
+  return `${number.toFixed(number % 1 ? 1 : 0)} km`;
+}
+
+function parsePaceMinutes(value){
+  const match = String(value || "").trim().match(/^(\d{1,2})(?::(\d{2}))?$/);
+  if(!match) return null;
+  const minutes = Number(match[1]);
+  const seconds = Number(match[2] || 0);
+  if(!Number.isFinite(minutes) || !Number.isFinite(seconds) || seconds >= 60) return null;
+  return minutes + seconds / 60;
+}
+
+function timeLabel(minutes){
+  if(!Number.isFinite(minutes) || minutes <= 0) return "-";
+  const rounded = Math.round(minutes);
+  const hours = Math.floor(rounded / 60);
+  const mins = rounded % 60;
+  if(state.lang === "ja"){
+    return hours ? `${hours}時間 ${mins}分` : `${mins}分`;
+  }
+  return hours ? `${hours}h ${mins}m` : `${mins} min`;
+}
+
+function validCoord(lat, lng){
+  return Number.isFinite(lat) && Number.isFinite(lng) && Math.abs(lat) <= 90 && Math.abs(lng) <= 180;
+}
+
+function coordsFromPair(text){
+  const match = String(text || "").match(/(-?\d+(?:\.\d+)?)\s*,\s*(-?\d+(?:\.\d+)?)/);
+  if(!match) return null;
+  const lat = Number(match[1]);
+  const lng = Number(match[2]);
+  return validCoord(lat, lng) ? {lat, lng} : null;
+}
+
+function parseCoordinates(value){
+  const text = String(value || "").trim();
+  if(!text) throw new Error(t("coordsRequired"));
+  const parsed = coordsFromPair(text);
+  if(parsed) return parsed;
+  throw new Error(t("coordsFormat"));
+}
+
+function setCenter(lat, lng, fit=false){
+  state.lat = Number(lat);
+  state.lng = Number(lng);
+  locationInput.value = `${state.lat.toFixed(6)},${state.lng.toFixed(6)}`;
+  updateRoute(fit);
+}
+
+function setRadius(value, fit=false){
+  const next = Math.min(100, Math.max(0.1, Number(value) || 2));
+  state.radiusKm = next;
+  radiusInput.value = String(next);
+  updateRoute(fit);
+}
+
+function updateRoute(fit=false){
+  const center = [state.lat, state.lng];
+  const radiusMeters = state.radiusKm * 1000;
+  centerMarker.setLatLng(center);
+  routeCircle.setLatLng(center);
+  routeCircle.setRadius(radiusMeters);
+  const pace = parsePaceMinutes(paceInput.value);
+  radiusMetric.textContent = formatKm(state.radiusKm);
+  timeMetric.textContent = pace ? timeLabel((2 * Math.PI * state.radiusKm) * pace) : "-";
+  if(fit) map.fitBounds(routeCircle.getBounds(), {padding:[30,30], maxZoom:15});
+}
+
+function popupElement(location){
+  const wrap = document.createElement("div");
+  wrap.className = "popup";
+  const title = document.createElement("b");
+  title.textContent = location.name || location.brand;
+  wrap.appendChild(title);
+  for(const text of [location.address, location.status ? `${t("status")}: ${location.status}` : "", location.hours, location.note, location.phone ? `${t("phone")}: ${location.phone}` : ""]){
+    if(!text) continue;
+    const line = document.createElement("p");
+    line.textContent = text;
+    wrap.appendChild(line);
+  }
+  const mapLink = document.createElement("a");
+  mapLink.href = location.directionsUrl || location.url || "#";
+  mapLink.target = "_blank";
+  mapLink.rel = "noopener";
+  mapLink.textContent = t("map");
+  wrap.appendChild(mapLink);
+  if(location.url){
+    const sourceLink = document.createElement("a");
+    sourceLink.href = location.url;
+    sourceLink.target = "_blank";
+    sourceLink.rel = "noopener";
+    sourceLink.textContent = t("source");
+    wrap.appendChild(sourceLink);
+  }
+  return wrap;
+}
+
+function markerIcon(location){
+  const meta = BRAND_META[location.brand] || {short:location.short || "M", className:"brand-af"};
+  return L.divIcon({
+    className:"",
+    html:`<div class="marker ${meta.className}">${meta.short}</div>`,
+    iconSize:[24,24],
+    iconAnchor:[12,12],
+    popupAnchor:[0,-12]
+  });
+}
+
+function visibleLocations(){
+  return (DATA.locations || []).filter(location=>{
+    if(!state.brands.has(location.brand)) return false;
+    if(!state.areas.has(location.area)) return false;
+    return true;
+  });
+}
+
+function renderMarkers(updateStatus=true){
+  const items = visibleLocations();
+  markerLayer.clearLayers();
+  for(const location of items){
+    L.marker([location.lat, location.lng], {icon:markerIcon(location), title:location.name})
+      .bindPopup(popupElement(location))
+      .addTo(markerLayer);
+  }
+  storeCountEl.textContent = String(items.length);
+  if(updateStatus) setStatusKey("visibleStatus", items.length, (DATA.locations || []).length);
+}
+
+function checkboxChip(label, checked, onChange, dotClass){
+  const chip = document.createElement("label");
+  chip.className = "chip";
+  chip.classList.toggle("active", checked);
+  const input = document.createElement("input");
+  input.type = "checkbox";
+  input.checked = checked;
+  input.addEventListener("change", () => {
+    chip.classList.toggle("active", input.checked);
+    onChange(input.checked);
+  });
+  const span = document.createElement("span");
+  if(dotClass){
+    const dot = document.createElement("i");
+    dot.className = `dot ${dotClass}`;
+    span.appendChild(dot);
+  }
+  span.appendChild(document.createTextNode(label));
+  chip.append(input, span);
+  return chip;
+}
+
+function renderBrandKey(){
+  const brandKey = document.getElementById("brandKey");
+  brandKey.innerHTML = "";
+  for(const [brand, meta] of Object.entries(BRAND_META)){
+    const row = document.createElement("div");
+    row.className = "brand-key-row";
+    const dot = document.createElement("i");
+    dot.className = `dot ${meta.className}`;
+    const code = document.createElement("span");
+    code.className = "brand-key-code";
+    code.textContent = meta.short;
+    const name = document.createElement("span");
+    name.textContent = meta.labels && meta.labels[state.lang] ? meta.labels[state.lang] : brand;
+    row.append(dot, code, name);
+    brandKey.appendChild(row);
+  }
+}
+
+function renderFilters(){
+  const brandFilters = document.getElementById("brandFilters");
+  brandFilters.innerHTML = "";
+  for(const [brand, meta] of Object.entries(BRAND_META)){
+    const count = DATA.counts && DATA.counts.byBrand ? DATA.counts.byBrand[brand] || 0 : 0;
+    brandFilters.appendChild(checkboxChip(`${meta.short} (${count})`, state.brands.has(brand), checked=>{
+      checked ? state.brands.add(brand) : state.brands.delete(brand);
+      renderMarkers();
+    }, meta.className));
+  }
+  renderBrandKey();
+  const areaFilters = document.getElementById("areaFilters");
+  areaFilters.innerHTML = "";
+  for(const area of DATA.areas || []){
+    const count = DATA.counts && DATA.counts.byArea ? DATA.counts.byArea[area] || 0 : 0;
+    areaFilters.appendChild(checkboxChip(`${AREA_LABELS[state.lang][area] || area} (${count})`, state.areas.has(area), checked=>{
+      checked ? state.areas.add(area) : state.areas.delete(area);
+      renderMarkers();
+    }));
+  }
+}
+
+function loadCenter(){
+  try{
+    const parsed = parseCoordinates(locationInput.value);
+    setCenter(parsed.lat, parsed.lng, true);
+    setStatusKey("centerLoaded");
+  }catch(error){
+    setStatusText(error.message || t("centerFailed"));
+  }
+}
+
+function useGps(){
+  if(!navigator.geolocation){setStatusKey("gpsUnavailable");return;}
+  setStatusKey("locating");
+  navigator.geolocation.getCurrentPosition(
+    position=>{
+      setCenter(position.coords.latitude, position.coords.longitude, true);
+      setStatusKey("gpsSet");
+    },
+    error=>setStatusText(error.message || t("gpsFailed")),
+    {enableHighAccuracy:true, timeout:10000}
+  );
+}
+
+function updateDrawerShift(){
+  const panel = document.querySelector(".panel");
+  if(!panel) return;
+  const reveal = 0;
+  document.documentElement.style.setProperty("--panel-shift", `-${Math.max(0, panel.offsetWidth - reveal)}px`);
+}
+
+function setDrawerOpen(open){
+  drawer.classList.toggle("closed", !open);
+  drawerToggle.setAttribute("aria-expanded", String(open));
+  drawerToggle.setAttribute("aria-label", t(open ? "hidePanel" : "openPanel"));
+  drawerToggleText.textContent = open ? "<" : ">";
+  window.setTimeout(() => {
+    if(map) map.invalidateSize();
+  }, 320);
+}
+
+function toggleDrawer(){
+  setDrawerOpen(drawer.classList.contains("closed"));
+}
+
+function applyLanguage(){
+  const html = document.documentElement;
+  html.lang = state.lang;
+  document.title = t("docTitle");
+  document.getElementById("map").setAttribute("aria-label", t("mapLabel"));
+  document.querySelector(".panel").setAttribute("aria-label", t("panelLabel"));
+  document.querySelector(".lang-switch").setAttribute("aria-label", t("languageLabel"));
+  document.getElementById("langEn").classList.toggle("active", state.lang === "en");
+  document.getElementById("langJa").classList.toggle("active", state.lang === "ja");
+  document.getElementById("titleText").textContent = t("title");
+  document.getElementById("updatedLabel").textContent = formatDate(DATA.generatedAt);
+  document.getElementById("sourceLabel").textContent = `${(DATA.locations || []).length} ${t("stores")}`;
+  document.getElementById("centerLabel").textContent = t("centerLabel");
+  document.getElementById("radiusLabel").textContent = t("radiusLabel");
+  document.getElementById("paceLabel").textContent = t("paceLabel");
+  document.getElementById("loadBtn").textContent = t("coordsButton");
+  document.getElementById("gpsBtn").textContent = t("gpsButton");
+  drawerToggle.setAttribute("aria-label", t(drawer.classList.contains("closed") ? "openPanel" : "hidePanel"));
+  drawerToggleText.textContent = drawer.classList.contains("closed") ? ">" : "<";
+  document.getElementById("brandsLabel").textContent = t("brandsLabel");
+  document.getElementById("areasLabel").textContent = t("areasLabel");
+  document.getElementById("filterHint").textContent = t("filterHint");
+  document.getElementById("storesStatLabel").textContent = t("storesStat");
+  document.getElementById("radiusStatLabel").textContent = t("radiusStat");
+  document.getElementById("loopStatLabel").textContent = t("loopStat");
+  if(state.lastStatusKey){
+    statusEl.textContent = t(state.lastStatusKey, ...state.lastStatusArgs);
+  }
+  renderFilters();
+  updateRoute(false);
+}
+
+function setLanguage(lang){
+  state.lang = lang === "ja" ? "ja" : "en";
+  localStorage.setItem("runPlannerLang", state.lang);
+  applyLanguage();
+  renderMarkers(false);
+}
+
+function init(){
+  map = L.map("map", {zoomControl:true, minZoom:7, maxZoom:18}).setView([state.lat, state.lng], 10);
+  L.tileLayer(GSI_TILE_URL, {minZoom:7, maxZoom:18, attribution:GSI_ATTRIBUTION}).addTo(map);
+  markerLayer = L.layerGroup().addTo(map);
+  routeCircle = L.circle([state.lat, state.lng], {radius:state.radiusKm * 1000, color:"#1f8fff", weight:3, dashArray:"8 9", fillColor:"#22c55e", fillOpacity:.12}).addTo(map);
+  centerMarker = L.marker([state.lat, state.lng], {draggable:true}).addTo(map);
+  centerMarker.on("dragend", event=>{
+    const latlng = event.target.getLatLng();
+    setCenter(latlng.lat, latlng.lng, false);
+    setStatusKey("centerMoved");
+  });
+  map.on("click", event=>{
+    setCenter(event.latlng.lat, event.latlng.lng, false);
+    setStatusKey("centerMoved");
+  });
+  applyLanguage();
+  updateDrawerShift();
+  setDrawerOpen(true);
+  renderMarkers();
+  updateRoute(false);
+}
+
+document.getElementById("langEn").onclick = ()=>setLanguage("en");
+document.getElementById("langJa").onclick = ()=>setLanguage("ja");
+document.getElementById("loadBtn").onclick = loadCenter;
+document.getElementById("gpsBtn").onclick = useGps;
+drawerToggle.onclick = toggleDrawer;
+locationInput.addEventListener("keydown", event=>{if(event.key === "Enter"){event.preventDefault();loadCenter();}});
+radiusInput.addEventListener("input", ()=>setRadius(radiusInput.value, false));
+radiusInput.addEventListener("change", ()=>setRadius(radiusInput.value, true));
+paceInput.addEventListener("input", ()=>updateRoute(false));
+window.addEventListener("resize", updateDrawerShift);
+
+if(window.L) init();
+else setStatusKey("mapFailed");
+</script>
+</body>
+</html>
