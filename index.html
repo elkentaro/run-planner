@@ -73,7 +73,7 @@
     .drawer{--tab-width:40px;--tab-height:96px;left:0;top:calc(8px + env(safe-area-inset-top));width:calc(100vw - 54px);}
     .drawer::before{border-radius:24px 0 0 0;}
     .drawer-tab{border-radius:0 18px 18px 0;font-size:22px;}
-    .panel{max-height:52dvh;border-radius:24px 0 24px 24px;}
+    .panel{max-height:calc(100dvh - 16px - env(safe-area-inset-top) - env(safe-area-inset-bottom));border-radius:24px 0 24px 24px;}
     .panel-inner{gap:10px;padding:19px 10px 10px;}
     .pane-block{gap:10px;border-radius:20px;padding:10px;}
     .topline{align-items:center;}
