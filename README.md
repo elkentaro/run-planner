@@ -34,4 +34,5 @@ Use:
 - Drag the center marker for finer placement.
 - Use brand and area filters to reduce visible store markers.
 - Use the brand key to read marker abbreviations: `AF`, `WG`, and `CR` for CRISP SALAD WORKS.
+- The runner emoji marker is a standalone running shop marker and is not part of the brand key.
 - Use the `EN` / `日本語` switch to change the UI language.

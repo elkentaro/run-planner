@@ -60,6 +60,7 @@
   .stat b{display:block;font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:2px;}
   .stat span{font-size:18px;font-weight:900;}
   .marker{width:24px;height:24px;border:2px solid #fff;border-radius:50%;color:#fff;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:900;box-shadow:0 3px 10px rgba(0,0,0,.28);}
+  .runner-marker{width:32px;height:32px;border:2px solid #fff;border-radius:50%;background:#111f18;display:flex;align-items:center;justify-content:center;font-size:18px;line-height:1;box-shadow:0 4px 14px rgba(0,0,0,.32);}
   .brand-af{background:#7b1fa2;}
   .brand-wg{background:#006323;}
   .brand-cr{background:#d97706;}
@@ -160,6 +161,16 @@ const BRAND_META = {
   "WithGreen": {short:"WG", className:"brand-wg", labels:{en:"WithGreen", ja:"ウィズグリーン"}},
   "CRISP": {short:"CR", className:"brand-cr", labels:{en:"CRISP SALAD WORKS", ja:"クリスプ・サラダワークス"}}
 };
+const RUNNER_LOCATIONS = [
+  {
+    name:"RUNPOYA (ランポヤ)",
+    address:"〒142-0053 東京都品川区中延1-4-17 サンパークビル103",
+    lat:35.612921380210295,
+    lng:139.70927051485083,
+    mapUrl:"https://www.google.com/maps/search/?api=1&query=RUNPOYA%20%E6%9D%B1%E4%BA%AC%E9%83%BD%E5%93%81%E5%B7%9D%E5%8C%BA%E4%B8%AD%E5%BB%B61-4-17-103",
+    homepageUrl:"https://runpoya.com/shop-info/"
+  }
+];
 const AREA_LABELS = {
   en: {"東京都":"Tokyo","神奈川県":"Kanagawa","埼玉県":"Saitama","千葉県":"Chiba","栃木県":"Tochigi"},
   ja: {"東京都":"東京都","神奈川県":"神奈川県","埼玉県":"埼玉県","千葉県":"千葉県","栃木県":"栃木県"}
@@ -204,6 +215,7 @@ const I18N = {
     status:"Status",
     phone:"Phone",
     map:"Map",
+    homepage:"Homepage",
     source:"Source"
   },
   ja: {
@@ -245,6 +257,7 @@ const I18N = {
     status:"状態",
     phone:"電話",
     map:"地図",
+    homepage:"ホームページ",
     source:"ホームページ"
   }
 };
@@ -379,17 +392,17 @@ function popupElement(location){
     wrap.appendChild(line);
   }
   const mapLink = document.createElement("a");
-  mapLink.href = location.directionsUrl || location.url || "#";
+  mapLink.href = location.mapUrl || location.directionsUrl || location.url || "#";
   mapLink.target = "_blank";
   mapLink.rel = "noopener";
   mapLink.textContent = t("map");
   wrap.appendChild(mapLink);
-  if(location.url){
+  if(location.homepageUrl || location.url){
     const sourceLink = document.createElement("a");
-    sourceLink.href = location.url;
+    sourceLink.href = location.homepageUrl || location.url;
     sourceLink.target = "_blank";
     sourceLink.rel = "noopener";
-    sourceLink.textContent = t("source");
+    sourceLink.textContent = location.homepageUrl ? t("homepage") : t("source");
     wrap.appendChild(sourceLink);
   }
   return wrap;
@@ -406,6 +419,16 @@ function markerIcon(location){
   });
 }
 
+function runnerIcon(){
+  return L.divIcon({
+    className:"",
+    html:`<div class="runner-marker">🏃</div>`,
+    iconSize:[32,32],
+    iconAnchor:[16,16],
+    popupAnchor:[0,-16]
+  });
+}
+
 function visibleLocations(){
   return (DATA.locations || []).filter(location=>{
     if(!state.brands.has(location.brand)) return false;
@@ -419,6 +442,11 @@ function renderMarkers(updateStatus=true){
   markerLayer.clearLayers();
   for(const location of items){
     L.marker([location.lat, location.lng], {icon:markerIcon(location), title:location.name})
+      .bindPopup(popupElement(location))
+      .addTo(markerLayer);
+  }
+  for(const location of RUNNER_LOCATIONS){
+    L.marker([location.lat, location.lng], {icon:runnerIcon(), title:location.name})
       .bindPopup(popupElement(location))
       .addTo(markerLayer);
   }
