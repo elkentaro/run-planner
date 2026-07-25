@@ -377,7 +377,7 @@ function updateRoute(fit=false){
   routeCircle.setRadius(radiusMeters);
   const pace = parsePaceMinutes(paceInput.value);
   radiusMetric.textContent = formatKm(state.radiusKm);
-  timeMetric.textContent = pace ? timeLabel((2 * Math.PI * state.radiusKm) * pace) : "-";
+  timeMetric.textContent = pace ? timeLabel(state.radiusKm * pace) : "-";
   if(fit) map.fitBounds(routeCircle.getBounds(), {padding:[30,30], maxZoom:15});
 }
 
