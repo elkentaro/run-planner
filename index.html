@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<meta name="run-planner-version" content="2026.07.26.1">
+<meta name="run-planner-version" content="2026.07.26.2">
 <title>Run Planner Map</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <script data-goatcounter="https://runplanhacker.goatcounter.com/count"
@@ -32,7 +32,8 @@
   .lang-switch{display:inline-grid;grid-template-columns:1fr 1fr;width:132px;border-radius:999px;background:#e8f0ea;padding:3px;}
   .lang-switch button{border:0;border-radius:999px;background:transparent;min-height:30px;font-size:12px;font-weight:900;cursor:pointer;color:#52645a;}
   .lang-switch button.active{background:var(--ink);color:#fff;}
-  .meta{font-size:11px;color:var(--muted);text-align:right;line-height:1.25;}
+  .meta{font-size:11px;color:var(--muted);line-height:1.25;}
+  .pane-meta{border-top:1px solid #e5eee8;padding-top:8px;}
   .control{display:grid;gap:4px;}
   label{font-size:10px;text-transform:uppercase;letter-spacing:.06em;font-weight:800;}
   input,select{width:100%;border:1px solid var(--line);border-radius:15px;background:#fff;padding:10px 12px;min-height:42px;box-shadow:inset 0 1px 0 rgba(255,255,255,.7);}
@@ -148,7 +149,6 @@
               <button type="button" id="langJa">日本語</button>
             </div>
           </div>
-          <div class="meta"><span id="updatedLabel">Loading</span><br><span id="sourceLabel"></span><br><span id="versionLabel"></span></div>
         </div>
         <div class="control">
           <label for="locationInput" id="centerLabel">Center coordinates</label>
@@ -204,6 +204,7 @@
           <label id="areasLabel">Areas</label>
           <div class="chips" id="areaFilters"></div>
         </div>
+        <div class="meta pane-meta"><span id="updatedLabel">Loading</span><br><span id="sourceLabel"></span><br><span id="versionLabel"></span></div>
       </div>
     </div>
   </section>
@@ -218,7 +219,7 @@
 <script>
 const DATA = window.RUN_PLANNER_DATA || {locations:[], areas:[], counts:{byBrand:{}, byArea:{}}};
 const MAJOR_STATIONS = window.RUN_PLANNER_MAJOR_STATIONS || [];
-const APP_VERSION = "2026.07.26.1";
+const APP_VERSION = "2026.07.26.2";
 const DEFAULT_CENTER = {lat:35.685175,lng:139.752800};
 const GSI_TILE_URL = "https://cyberjapandata.gsi.go.jp/xyz/std/{z}/{x}/{y}.png";
 const GSI_ATTRIBUTION = '<a href="https://maps.gsi.go.jp/development/ichiran.html">地理院タイル</a>';
