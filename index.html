@@ -79,7 +79,7 @@
   .map-element-code{font-weight:900;white-space:nowrap;}
   .map-element-name{min-width:0;overflow-wrap:anywhere;}
   .map-element-count{font-size:11px;font-weight:800;color:inherit;opacity:.72;white-space:nowrap;}
-  .filter-hint{border-top:1px solid #e5eee8;padding-top:8px;font-size:11px;color:#5d6f64;line-height:1.35;}
+  .label-hint{text-transform:none;letter-spacing:0;font-size:11px;font-weight:700;color:var(--muted);}
   .status{border-top:1px solid #e5eee8;padding-top:8px;font-size:12px;color:var(--muted);min-height:26px;}
   .marker{width:24px;height:24px;border:2px solid #fff;border-radius:50%;color:#fff;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:900;box-shadow:0 3px 10px rgba(0,0,0,.28);}
   .convenience-marker{width:30px;height:22px;border-radius:999px;font-size:8px;border-width:2px;opacity:.96;}
@@ -196,14 +196,13 @@
       </div>
       <div class="pane-block filter-panel">
         <div class="control">
-          <label id="mapElementsLabel">Map elements</label>
+          <label id="mapElementsLabel"><span id="mapElementsLabelText">Map elements</span> <span class="label-hint" id="mapElementsHint">(Click selected filters to unselect.)</span></label>
           <div class="map-element-list" id="mapElementFilters"></div>
         </div>
         <div class="control">
           <label id="areasLabel">Areas</label>
           <div class="chips" id="areaFilters"></div>
         </div>
-        <div class="filter-hint" id="filterHint">Click selected filters to unselect.</div>
       </div>
     </div>
   </section>
@@ -1815,9 +1814,9 @@ function applyLanguage(){
   document.getElementById("gpsBtn").textContent = t("gpsButton");
   drawerToggle.setAttribute("aria-label", t(drawer.classList.contains("closed") ? "openPanel" : "hidePanel"));
   drawerToggleText.textContent = drawer.classList.contains("closed") ? ">" : "<";
-  document.getElementById("mapElementsLabel").textContent = t("mapElementsLabel");
+  document.getElementById("mapElementsLabelText").textContent = t("mapElementsLabel");
+  document.getElementById("mapElementsHint").textContent = `(${t("filterHint")})`;
   document.getElementById("areasLabel").textContent = t("areasLabel");
-  document.getElementById("filterHint").textContent = t("filterHint");
   document.querySelector(".route-draw-controls").setAttribute("aria-label", t("routeDrawLabel"));
   document.getElementById("routeDrawFootnote").textContent = t("routeDrawFootnote");
   renderRouteControls();
