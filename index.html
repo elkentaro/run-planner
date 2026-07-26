@@ -38,10 +38,13 @@
   input:focus,select:focus{outline:3px solid rgba(34,197,94,.2);border-color:#5fcf83;}
   .row{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
   .run-settings{grid-template-columns:minmax(0,1fr) minmax(0,1fr) minmax(104px,.95fr);align-items:start;}
-  .run-settings input,.run-settings select,.estimate-box{min-height:42px;font-size:15px;font-weight:800;line-height:1.2;}
+  .run-settings input,.run-settings select,.estimate-box{height:42px;min-height:42px;font-size:15px;font-weight:700;line-height:1.2;}
   .run-settings input,.run-settings select{padding-top:9px;padding-bottom:9px;}
+  .select-wrap{position:relative;}
+  .select-wrap select{appearance:none;-webkit-appearance:none;padding-right:30px;}
+  .select-wrap::after{content:"";position:absolute;right:12px;top:50%;width:7px;height:7px;border-right:2px solid #657268;border-bottom:2px solid #657268;transform:translateY(-65%) rotate(45deg);pointer-events:none;}
   .estimate-box{display:flex;align-items:center;gap:8px;width:100%;border:1px solid var(--line);border-radius:15px;background:#fff;padding:9px 10px;box-shadow:inset 0 1px 0 rgba(255,255,255,.7);}
-  .estimate-value{font:inherit;color:var(--ink);white-space:nowrap;}
+  .estimate-value{font-size:15px;font-weight:700;line-height:1.2;color:var(--ink);white-space:nowrap;}
   .estimate-distance{min-width:0;margin-left:auto;font-size:10px;font-weight:700;color:var(--muted);line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
   .actions{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
   .btn{border:0;border-radius:16px;background:#fff;padding:10px;min-height:42px;cursor:pointer;font-size:14px;font-weight:900;box-shadow:0 6px 18px rgba(30,45,36,.1);}
@@ -114,7 +117,7 @@
     .btn{font-size:12px;padding:7px 5px;}
     .brand-tabs{grid-template-columns:1fr;}
     .run-settings{grid-template-columns:minmax(0,1fr) minmax(0,1fr) minmax(96px,.95fr);gap:6px;}
-    .run-settings input,.run-settings select,.estimate-box{font-size:14px;}
+    .run-settings input,.run-settings select,.estimate-box,.estimate-value{font-size:14px;}
     .estimate-box{padding:8px;}
   }
 </style>
@@ -142,7 +145,7 @@
         <div class="row run-settings">
           <div class="control">
             <label for="radiusInput" id="radiusLabel">Radius km</label>
-            <select id="radiusInput"></select>
+            <div class="select-wrap"><select id="radiusInput"></select></div>
           </div>
           <div class="control">
             <label for="paceInput" id="paceLabel">Pace min/km</label>
