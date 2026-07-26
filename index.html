@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="run-planner-version" content="2026.07.26.1">
 <title>Run Planner Map</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <script data-goatcounter="https://runplanhacker.goatcounter.com/count"
@@ -147,7 +148,7 @@
               <button type="button" id="langJa">日本語</button>
             </div>
           </div>
-          <div class="meta"><span id="updatedLabel">Loading</span><br><span id="sourceLabel"></span></div>
+          <div class="meta"><span id="updatedLabel">Loading</span><br><span id="sourceLabel"></span><br><span id="versionLabel"></span></div>
         </div>
         <div class="control">
           <label for="locationInput" id="centerLabel">Center coordinates</label>
@@ -217,6 +218,7 @@
 <script>
 const DATA = window.RUN_PLANNER_DATA || {locations:[], areas:[], counts:{byBrand:{}, byArea:{}}};
 const MAJOR_STATIONS = window.RUN_PLANNER_MAJOR_STATIONS || [];
+const APP_VERSION = "2026.07.26.1";
 const DEFAULT_CENTER = {lat:35.685175,lng:139.752800};
 const GSI_TILE_URL = "https://cyberjapandata.gsi.go.jp/xyz/std/{z}/{x}/{y}.png";
 const GSI_ATTRIBUTION = '<a href="https://maps.gsi.go.jp/development/ichiran.html">地理院タイル</a>';
@@ -224,12 +226,16 @@ const DRAW_ZOOM = 16;
 const ROUTE_STORAGE_KEY = "runPlannerDrawnRoute";
 const GPX_MIME_TYPE = "application/gpx+xml";
 const BATHROOM_STORAGE_KEY = "runPlannerBathrooms";
+const BATHROOM_CACHE_KEY = "runPlannerBathroomCacheV1";
+const BATHROOM_CACHE_TTL_MS = 7 * 24 * 60 * 60 * 1000;
+const BATHROOM_CACHE_MAX_ENTRIES = 8;
 const BATHROOM_EMOJI = "🚾";
 const BATHROOM_MIN_ZOOM = 15;
 const BATHROOM_MARKER_LIMIT = 500;
 const BATHROOM_ENDPOINT = "https://overpass-api.de/api/interpreter";
 const BATHROOM_ATTRIBUTION = 'Bathroom data &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap contributors</a>';
 const BATHROOM_EXCLUDED_ACCESS = new Set(["private", "customers", "no"]);
+const BATHROOM_CACHE_TAGS = ["name", "name:ja", "name:en", "access", "toilets:access", "opening_hours", "fee", "wheelchair", "changing_table", "unisex", "male", "female"];
 const BRAND_META = {
   "Anytime Fitness": {short:"AF", className:"brand-af", labels:{en:"Anytime Fitness", ja:"エニタイムフィットネス"}},
   "WithGreen": {short:"WG", className:"brand-wg", labels:{en:"WithGreen", ja:"ウィズグリーン"}},
@@ -267,6 +273,7 @@ const I18N = {
     loading:"Loading",
     staticData:"Static data",
     updated:"Updated",
+    version:value=>`Version ${value}`,
     stores:"stores",
     centerLabel:"Center coordinates",
     radiusLabel:"Radius km",
@@ -358,6 +365,7 @@ const I18N = {
     loading:"読み込み中",
     staticData:"静的データ",
     updated:"更新",
+    version:value=>`バージョン ${value}`,
     stores:"店舗",
     centerLabel:"中心座標",
     radiusLabel:"半径 km",
@@ -467,6 +475,8 @@ let bathroomFetchController = null;
 let bathroomFetchTimer = null;
 let bathroomFetchId = 0;
 let bathroomFailedKey = "";
+let bathroomCacheLoaded = false;
+let bathroomCacheEntries = [];
 const bathroomById = new Map();
 let map, centerMarker, routeCircle, markerLayer, convenienceLayer, bathroomLayer, majorStationLayer, drawnRouteLine, routePointLayer, routeDistancePopupTimer;
 
@@ -1291,6 +1301,50 @@ function bathroomFromOsmElement(element){
   };
 }
 
+function bathroomCacheTags(tags){
+  const cached = {};
+  for(const key of BATHROOM_CACHE_TAGS){
+    if(tags && tags[key]){
+      cached[key] = String(tags[key]).slice(0, 300);
+    }
+  }
+  return cached;
+}
+
+function bathroomItemForCache(item){
+  if(!item || !validCoord(Number(item.lat), Number(item.lng)) || !item.id) return null;
+  return {
+    id:String(item.id),
+    osmType:String(item.osmType || "node"),
+    osmId:item.osmId,
+    lat:Number(item.lat),
+    lng:Number(item.lng),
+    tags:bathroomCacheTags(item.tags || {})
+  };
+}
+
+function normalizeCachedBathroomItem(item){
+  const normalized = bathroomItemForCache(item);
+  if(!normalized || !normalized.id) return null;
+  return normalized;
+}
+
+function bathroomBoundsArray(bounds){
+  return [
+    Number(bounds.getSouth().toFixed(7)),
+    Number(bounds.getWest().toFixed(7)),
+    Number(bounds.getNorth().toFixed(7)),
+    Number(bounds.getEast().toFixed(7))
+  ];
+}
+
+function bathroomBoundsFromArray(value){
+  if(!Array.isArray(value) || value.length !== 4) return null;
+  const [south, west, north, east] = value.map(Number);
+  if(!validCoord(south, west) || !validCoord(north, east) || south > north || west > east) return null;
+  return L.latLngBounds([south, west], [north, east]);
+}
+
 function bathroomBoundsKey(bounds){
   return [
     bounds.getSouth().toFixed(3),
@@ -1314,6 +1368,92 @@ function bathroomQuery(bounds){
 out center ${BATHROOM_MARKER_LIMIT};`;
 }
 
+function saveBathroomCache(){
+  const payload = {
+    version:1,
+    savedAt:Date.now(),
+    entries:bathroomCacheEntries.map(entry=>({
+      key:entry.key,
+      fetchedAt:entry.fetchedAt,
+      bounds:entry.bounds,
+      items:entry.items
+    }))
+  };
+  try{
+    localStorage.setItem(BATHROOM_CACHE_KEY, JSON.stringify(payload));
+  }catch(error){
+    bathroomCacheEntries = bathroomCacheEntries.slice(0, Math.max(1, Math.floor(bathroomCacheEntries.length / 2)));
+    try{
+      localStorage.setItem(BATHROOM_CACHE_KEY, JSON.stringify({...payload, entries:bathroomCacheEntries}));
+    }catch(retryError){}
+  }
+}
+
+function loadBathroomCache(){
+  if(bathroomCacheLoaded) return;
+  bathroomCacheLoaded = true;
+  let dirty = false;
+  let payload = null;
+  try{
+    payload = JSON.parse(localStorage.getItem(BATHROOM_CACHE_KEY) || "null");
+  }catch(error){
+    dirty = true;
+  }
+  const now = Date.now();
+  const entries = payload && Array.isArray(payload.entries) ? payload.entries : [];
+  bathroomCacheEntries = [];
+  for(const entry of entries){
+    const fetchedAt = Number(entry && entry.fetchedAt);
+    const bounds = bathroomBoundsFromArray(entry && entry.bounds);
+    if(!Number.isFinite(fetchedAt) || now - fetchedAt > BATHROOM_CACHE_TTL_MS || !bounds){
+      dirty = true;
+      continue;
+    }
+    const items = Array.isArray(entry.items) ? entry.items.map(normalizeCachedBathroomItem).filter(Boolean) : [];
+    for(const item of items){
+      bathroomById.set(item.id, item);
+    }
+    bathroomCacheEntries.push({
+      key:entry.key || bathroomBoundsKey(bounds),
+      fetchedAt,
+      bounds:bathroomBoundsArray(bounds),
+      items
+    });
+  }
+  bathroomCacheEntries.sort((left, right)=>right.fetchedAt - left.fetchedAt);
+  if(bathroomCacheEntries.length > BATHROOM_CACHE_MAX_ENTRIES){
+    bathroomCacheEntries = bathroomCacheEntries.slice(0, BATHROOM_CACHE_MAX_ENTRIES);
+    dirty = true;
+  }
+  if(dirty) saveBathroomCache();
+}
+
+function cachedBathroomBoundsContaining(bounds){
+  loadBathroomCache();
+  for(const entry of bathroomCacheEntries){
+    const cachedBounds = bathroomBoundsFromArray(entry.bounds);
+    if(cachedBounds && cachedBounds.contains(bounds)) return cachedBounds;
+  }
+  return null;
+}
+
+function rememberBathroomCache(bounds, items){
+  loadBathroomCache();
+  const key = bathroomBoundsKey(bounds);
+  const now = Date.now();
+  const cachedItems = items.map(bathroomItemForCache).filter(Boolean);
+  bathroomCacheEntries = bathroomCacheEntries
+    .filter(entry=>entry.key !== key && now - Number(entry.fetchedAt) <= BATHROOM_CACHE_TTL_MS);
+  bathroomCacheEntries.unshift({
+    key,
+    fetchedAt:now,
+    bounds:bathroomBoundsArray(bounds),
+    items:cachedItems
+  });
+  bathroomCacheEntries = bathroomCacheEntries.slice(0, BATHROOM_CACHE_MAX_ENTRIES);
+  saveBathroomCache();
+}
+
 function queueBathroomFetch(){
   if(!state.showBathrooms || !map || map.getZoom() < BATHROOM_MIN_ZOOM) return;
   if(bathroomFetchTimer) window.clearTimeout(bathroomFetchTimer);
@@ -1332,6 +1472,15 @@ async function fetchBathroomsForCurrentView(){
   const currentBounds = map.getBounds();
   if(bathroomFetchBounds && bathroomFetchBounds.contains(currentBounds)){
     state.bathroomLoading = false;
+    renderBathrooms();
+    return;
+  }
+  const cachedBounds = cachedBathroomBoundsContaining(currentBounds);
+  if(cachedBounds){
+    bathroomFetchBounds = cachedBounds;
+    bathroomFailedKey = "";
+    state.bathroomLoading = false;
+    state.bathroomStatus = "ready";
     renderBathrooms();
     return;
   }
@@ -1354,11 +1503,16 @@ async function fetchBathroomsForCurrentView(){
     if(!response.ok) throw new Error(`Overpass ${response.status}`);
     const payload = await response.json();
     if(requestId !== bathroomFetchId) return;
+    const fetchedItems = [];
     for(const element of payload.elements || []){
       const item = bathroomFromOsmElement(element);
-      if(item) bathroomById.set(item.id, item);
+      if(item){
+        bathroomById.set(item.id, item);
+        fetchedItems.push(item);
+      }
     }
     bathroomFetchBounds = fetchBounds;
+    rememberBathroomCache(fetchBounds, fetchedItems);
     bathroomFailedKey = "";
     state.bathroomStatus = "ready";
   }catch(error){
@@ -1402,6 +1556,11 @@ function renderBathrooms(updateFilters=true){
   }
   const currentBounds = map.getBounds();
   const fetchBounds = currentBounds.pad(0.35);
+  const cachedBounds = cachedBathroomBoundsContaining(currentBounds);
+  if(cachedBounds && (!bathroomFetchBounds || !bathroomFetchBounds.contains(currentBounds))){
+    bathroomFetchBounds = cachedBounds;
+    bathroomFailedKey = "";
+  }
   const needsFetch = !bathroomFetchBounds || !bathroomFetchBounds.contains(currentBounds);
   if(needsFetch && bathroomFailedKey !== bathroomBoundsKey(fetchBounds)){
     queueBathroomFetch();
@@ -1807,6 +1966,7 @@ function applyLanguage(){
   document.getElementById("titleText").textContent = t("title");
   document.getElementById("updatedLabel").textContent = formatDate(DATA.generatedAt);
   document.getElementById("sourceLabel").textContent = `${(DATA.locations || []).length} ${t("stores")}`;
+  document.getElementById("versionLabel").textContent = t("version", APP_VERSION);
   document.getElementById("centerLabel").textContent = t("centerLabel");
   document.getElementById("radiusLabel").textContent = t("radiusLabel");
   document.getElementById("paceLabel").textContent = t("paceLabel");
