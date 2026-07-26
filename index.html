@@ -45,7 +45,6 @@
   .select-wrap::after{content:"";position:absolute;right:12px;top:50%;width:7px;height:7px;border-right:2px solid #657268;border-bottom:2px solid #657268;transform:translateY(-65%) rotate(45deg);pointer-events:none;}
   .estimate-box{display:flex;align-items:center;gap:8px;width:100%;border:1px solid var(--line);border-radius:15px;background:#fff;padding:9px 10px;box-shadow:inset 0 1px 0 rgba(255,255,255,.7);}
   .estimate-value{font-size:15px;font-weight:700;line-height:1.2;color:var(--ink);white-space:nowrap;}
-  .estimate-distance{min-width:0;margin-left:auto;font-size:10px;font-weight:700;color:var(--muted);line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
   .actions{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
   .btn{border:0;border-radius:16px;background:#fff;padding:10px;min-height:42px;cursor:pointer;font-size:14px;font-weight:900;box-shadow:0 6px 18px rgba(30,45,36,.1);}
   .btn:hover{transform:translateY(-1px);}
@@ -155,7 +154,6 @@
             <label id="loopStatLabel">Estimated time</label>
             <div class="estimate-box">
               <span class="estimate-value" id="timeMetric">-</span>
-              <span class="estimate-distance"><span id="radiusStatLabel">Radius</span> <span id="radiusMetric">-</span></span>
             </div>
           </div>
         </div>
@@ -407,9 +405,7 @@ const drawer = document.getElementById("drawer");
 const drawerToggle = document.getElementById("drawerToggle");
 const drawerToggleText = document.getElementById("drawerToggleText");
 const statusEl = document.getElementById("status");
-const radiusStatLabelEl = document.getElementById("radiusStatLabel");
 const loopStatLabelEl = document.getElementById("loopStatLabel");
-const radiusMetric = document.getElementById("radiusMetric");
 const timeMetric = document.getElementById("timeMetric");
 const routeDrawBtn = document.getElementById("routeDrawBtn");
 const routeModeText = document.getElementById("routeModeText");
@@ -574,15 +570,11 @@ function updateDistanceMetrics(){
   const pace = parsePaceMinutes(paceInput.value);
   if(routeIsVisible()){
     const distance = routeDistanceKm();
-    radiusStatLabelEl.textContent = t("routeDistanceStat");
     loopStatLabelEl.textContent = t("routeTimeStat");
-    radiusMetric.textContent = routeDistanceLabel(distance);
     timeMetric.textContent = pace ? timeLabel(distance * pace) : "-";
     return;
   }
-  radiusStatLabelEl.textContent = t("radiusStat");
   loopStatLabelEl.textContent = t("loopStat");
-  radiusMetric.textContent = formatKm(state.radiusKm);
   timeMetric.textContent = pace ? timeLabel(state.radiusKm * pace) : "-";
 }
 
