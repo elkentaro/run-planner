@@ -32,6 +32,21 @@ Use:
 - Click the map to place the route center.
 - Change `Radius km` to redraw the distance radius.
 - Drag the center marker for finer placement.
+- Use the pencil button to draw a direct-line route. Zoom remains free until the
+  starting point is set, then draw mode zooms to level 16 and locks zoom while
+  editing the route.
+- The first draw-mode map click opens a `Set starting point` popup. After the
+  start is set, each map click adds the next waypoint directly.
+- Click an existing route segment to add a draggable control point between the
+  surrounding waypoints. This reopens edit mode if the route was locked.
+- Normal endpoint clicks show a compact distance popup. Right-click the route or
+  map while drawing to open the full route action menu.
+- Drawn routes replace the radius display and show total route distance plus
+  pace-based route time in the stats.
+- Use `Undo` to remove waypoints back to the starting point, `Done` to lock and
+  save the route, and `Start over` to clear it and begin again.
+- Use `Export GPX` after selecting `Done` to download the locked route as a GPX
+  track. Exported geometry uses the same direct-line points shown on the map.
 - Use brand and area filters to reduce visible store markers.
 - Use the brand key to read marker abbreviations: `AF`, `WG`, and `CR` for CRISP SALAD WORKS.
 - The runner emoji marker is a standalone running shop marker and is not part of the brand key.

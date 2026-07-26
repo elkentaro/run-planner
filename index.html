@@ -41,9 +41,19 @@
   .actions{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
   .btn{border:0;border-radius:16px;background:#fff;padding:10px;min-height:42px;cursor:pointer;font-size:14px;font-weight:900;box-shadow:0 6px 18px rgba(30,45,36,.1);}
   .btn:hover{transform:translateY(-1px);}
+  .btn:disabled{opacity:.45;cursor:not-allowed;transform:none;box-shadow:none;}
   .btn.primary{background:linear-gradient(135deg,#16a34a,#20c997);color:#fff;}
   .btn.accent{background:linear-gradient(135deg,#ff7a59,#f59e0b);color:#fff;}
   .btn.ghost{background:#eef6f0;color:#274334;}
+  .btn.compact{min-height:38px;padding:8px;font-size:12px;}
+  .route-draw-controls{display:grid;gap:8px;border-top:1px solid #e5eee8;padding-top:10px;}
+  .route-draw-topline{display:flex;align-items:center;gap:10px;min-height:42px;}
+  .tool-btn{display:inline-flex;align-items:center;justify-content:center;width:42px;height:42px;border:0;border-radius:14px;background:#eef6f0;color:#274334;cursor:pointer;box-shadow:0 6px 18px rgba(30,45,36,.1);}
+  .tool-btn:hover{transform:translateY(-1px);}
+  .tool-btn.active{background:linear-gradient(135deg,#17211b,#1b6f64);color:#fff;}
+  .tool-btn svg{width:20px;height:20px;stroke:currentColor;stroke-width:2.2;fill:none;stroke-linecap:round;stroke-linejoin:round;}
+  .route-mode-text{font-size:12px;font-weight:900;color:#415247;line-height:1.25;}
+  .route-actions{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;}
   .chips{display:flex;gap:7px;flex-wrap:wrap;}
   .brand-tabs{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;}
   .chip{position:relative;display:inline-flex;align-items:center;justify-content:center;gap:7px;border:1px solid transparent;border-radius:999px;background:#eef4ef;color:#435348;padding:8px 10px;min-height:36px;font-size:12px;font-weight:900;cursor:pointer;user-select:none;transition:background .18s ease,color .18s ease,box-shadow .18s ease;}
@@ -70,6 +80,19 @@
   .popup b{display:block;font-size:14px;margin-bottom:4px;}
   .popup p{font-size:12px;margin:0 0 6px;color:#333;}
   .popup a{display:inline-flex;margin-right:10px;font-size:12px;color:#050505;font-weight:800;}
+  .route-popup-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px;}
+  .route-popup-actions button{border:0;border-radius:12px;background:#eef6f0;color:#274334;padding:8px 10px;min-height:34px;font-size:12px;font-weight:900;cursor:pointer;}
+  .route-popup-actions button.primary{border:1px solid #bfe8ca;background:#e8f8ec;color:#17341f;}
+  .route-popup-actions button.accent{border:1px solid #f3c9bd;background:#fdebe5;color:#712417;}
+  .route-popup-actions button:disabled{opacity:.45;cursor:not-allowed;}
+  .leaflet-popup-content .route-distance-pop{min-width:92px;text-align:center;}
+  .route-distance-pop b{display:block;margin:0 0 2px;font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:#657268;}
+  .route-distance-pop span{display:block;font-size:15px;font-weight:900;color:#17211b;}
+  .route-control-point{width:18px;height:18px;border:3px solid #fff;border-radius:50%;background:#1f8fff;box-shadow:0 3px 10px rgba(0,0,0,.28);}
+  .route-control-point.start{background:#22c55e;}
+  .route-control-point.end{background:#ef5f4a;}
+  .leaflet-marker-draggable .route-control-point{cursor:grab;}
+  .leaflet-drag-target .route-control-point{cursor:grabbing;}
   html[lang="ja"] .btn.primary,html[lang="ja"] .btn.accent,html[lang="ja"] .chip.active,html[lang="ja"] .lang-switch button.active{font-weight:700;text-shadow:0 1px 2px rgba(0,0,0,.24);}
   html[lang="ja"] .btn,html[lang="ja"] .chip{font-weight:700;}
   @media(max-width:700px){
@@ -123,6 +146,23 @@
           <button class="btn ghost" id="loadBtn">Coords</button>
           <button class="btn primary" id="gpsBtn">GPS</button>
         </div>
+        <div class="route-draw-controls" aria-label="Route drawing">
+          <div class="route-draw-topline">
+            <button class="tool-btn" id="routeDrawBtn" type="button" aria-pressed="false" title="Draw route">
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M12 20h9"></path>
+                <path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"></path>
+              </svg>
+            </button>
+            <span class="route-mode-text" id="routeModeText">Draw route</span>
+          </div>
+          <div class="route-actions">
+            <button class="btn ghost compact" id="routeUndoBtn" type="button">Undo</button>
+            <button class="btn ghost compact" id="routeDoneBtn" type="button">Done</button>
+            <button class="btn ghost compact" id="routeStartOverBtn" type="button">Start over</button>
+            <button class="btn ghost compact" id="routeExportBtn" type="button">Export GPX</button>
+          </div>
+        </div>
       </div>
       <div class="pane-block filter-panel">
         <div class="control">
@@ -158,6 +198,8 @@ const DATA = window.RUN_PLANNER_DATA || {locations:[], areas:[], counts:{byBrand
 const DEFAULT_CENTER = {lat:35.562641,lng:139.687246};
 const GSI_TILE_URL = "https://cyberjapandata.gsi.go.jp/xyz/std/{z}/{x}/{y}.png";
 const GSI_ATTRIBUTION = '<a href="https://maps.gsi.go.jp/development/ichiran.html">地理院タイル</a>';
+const DRAW_ZOOM = 16;
+const ROUTE_STORAGE_KEY = "runPlannerDrawnRoute";
 const BRAND_META = {
   "Anytime Fitness": {short:"AF", className:"brand-af", labels:{en:"Anytime Fitness", ja:"エニタイムフィットネス"}},
   "WithGreen": {short:"WG", className:"brand-wg", labels:{en:"WithGreen", ja:"ウィズグリーン"}},
@@ -218,7 +260,33 @@ const I18N = {
     phone:"Phone",
     map:"Map",
     homepage:"Homepage",
-    source:"Source"
+    source:"Source",
+    routeDrawLabel:"Route drawing",
+    drawRoute:"Draw route",
+    editRoute:"Edit route",
+    drawingRoute:"Drawing route",
+    routeLocked:"Route locked",
+    undo:"Undo",
+    done:"Done",
+    startOver:"Start over",
+    exportGpx:"Export GPX",
+    setStartingPoint:"Set starting point",
+    routeDistanceStat:"Distance",
+    routeTimeStat:"Route run",
+    routeStartPrompt:"Click the map to choose a starting point.",
+    routeAddPrompt:"Click the map to add waypoints.",
+    routeStartSet:"Starting point set",
+    routeWaypointAdded:"Waypoint added",
+    routeControlPointAdded:"Control point added",
+    routeControlPointMoved:"Control point moved",
+    routeUndoDone:"Waypoint removed",
+    routeNeedWaypoint:"Add at least one waypoint before Done.",
+    routeDone:"Route locked",
+    routeCleared:"Route cleared",
+    routeDrawOff:"Route drawing off",
+    routeRestored:"Saved route restored",
+    gpxExported:"GPX exported",
+    gpxUnavailable:"Select Done before exporting GPX."
   },
   ja: {
     docTitle:"ランニングプランナーマップ",
@@ -260,7 +328,33 @@ const I18N = {
     phone:"電話",
     map:"地図",
     homepage:"ホームページ",
-    source:"ホームページ"
+    source:"ホームページ",
+    routeDrawLabel:"ルート作成",
+    drawRoute:"ルートを描く",
+    editRoute:"ルートを編集",
+    drawingRoute:"ルート作成中",
+    routeLocked:"ルート固定済み",
+    undo:"戻す",
+    done:"完了",
+    startOver:"最初から",
+    exportGpx:"GPX出力",
+    setStartingPoint:"開始地点に設定",
+    routeDistanceStat:"距離",
+    routeTimeStat:"ルート時間",
+    routeStartPrompt:"地図をクリックして開始地点を選びます。",
+    routeAddPrompt:"地図をクリックして経由点を追加します。",
+    routeStartSet:"開始地点を設定しました",
+    routeWaypointAdded:"経由点を追加しました",
+    routeControlPointAdded:"コントロールポイントを追加しました",
+    routeControlPointMoved:"コントロールポイントを移動しました",
+    routeUndoDone:"経由点を戻しました",
+    routeNeedWaypoint:"完了する前に経由点を1つ以上追加してください。",
+    routeDone:"ルートを固定しました",
+    routeCleared:"ルートを消去しました",
+    routeDrawOff:"ルート作成を終了しました",
+    routeRestored:"保存済みルートを復元しました",
+    gpxExported:"GPXを出力しました",
+    gpxUnavailable:"GPX出力の前に完了を選択してください。"
   }
 };
 const state = {
@@ -270,10 +364,13 @@ const state = {
   brands:new Set(Object.keys(BRAND_META)),
   areas:new Set(DATA.areas || []),
   lang:localStorage.getItem("runPlannerLang") === "ja" ? "ja" : "en",
+  routeMode:"empty",
+  routePoints:[],
+  drawZoomRestore:null,
   lastStatusKey:"clickPrompt",
   lastStatusArgs:[]
 };
-let map, centerMarker, routeCircle, markerLayer;
+let map, centerMarker, routeCircle, markerLayer, drawnRouteLine, routePointLayer, routeDistancePopupTimer;
 
 const locationInput = document.getElementById("locationInput");
 const radiusInput = document.getElementById("radiusInput");
@@ -283,8 +380,16 @@ const drawerToggle = document.getElementById("drawerToggle");
 const drawerToggleText = document.getElementById("drawerToggleText");
 const statusEl = document.getElementById("status");
 const storeCountEl = document.getElementById("storeCount");
+const radiusStatLabelEl = document.getElementById("radiusStatLabel");
+const loopStatLabelEl = document.getElementById("loopStatLabel");
 const radiusMetric = document.getElementById("radiusMetric");
 const timeMetric = document.getElementById("timeMetric");
+const routeDrawBtn = document.getElementById("routeDrawBtn");
+const routeModeText = document.getElementById("routeModeText");
+const routeUndoBtn = document.getElementById("routeUndoBtn");
+const routeDoneBtn = document.getElementById("routeDoneBtn");
+const routeStartOverBtn = document.getElementById("routeStartOverBtn");
+const routeExportBtn = document.getElementById("routeExportBtn");
 
 function t(key, ...args){
   const value = I18N[state.lang][key] ?? I18N.en[key] ?? key;
@@ -335,6 +440,36 @@ function timeLabel(minutes){
   return hours ? `${hours}h ${mins}m` : `${mins} min`;
 }
 
+function routeIsVisible(){
+  return state.routeMode === "drawing" || state.routePoints.length > 0;
+}
+
+function routeCanExport(){
+  return state.routeMode === "locked" && state.routePoints.length >= 2;
+}
+
+function pointFromLatLng(latlng){
+  return {lat:Number(latlng.lat), lng:Number(latlng.lng)};
+}
+
+function latLngFromPoint(point){
+  return L.latLng(point.lat, point.lng);
+}
+
+function routeDistanceKm(){
+  let meters = 0;
+  for(let index = 1; index < state.routePoints.length; index += 1){
+    meters += latLngFromPoint(state.routePoints[index - 1]).distanceTo(latLngFromPoint(state.routePoints[index]));
+  }
+  return meters / 1000;
+}
+
+function routeDistanceLabel(value){
+  const number = Number(value) || 0;
+  if(number < 10) return `${number.toFixed(2)} km`;
+  return `${number.toFixed(1)} km`;
+}
+
 function validCoord(lat, lng){
   return Number.isFinite(lat) && Number.isFinite(lng) && Math.abs(lat) <= 90 && Math.abs(lng) <= 180;
 }
@@ -369,15 +504,44 @@ function setRadius(value, fit=false){
   updateRoute(fit);
 }
 
+function setLayerVisible(layer, visible){
+  if(!map || !layer) return;
+  if(visible && !map.hasLayer(layer)) layer.addTo(map);
+  if(!visible && map.hasLayer(layer)) map.removeLayer(layer);
+}
+
+function syncRouteVisibility(){
+  const showDrawnRoute = routeIsVisible();
+  setLayerVisible(routeCircle, !showDrawnRoute);
+  setLayerVisible(centerMarker, !showDrawnRoute);
+  setLayerVisible(drawnRouteLine, showDrawnRoute);
+  setLayerVisible(routePointLayer, showDrawnRoute);
+}
+
+function updateDistanceMetrics(){
+  const pace = parsePaceMinutes(paceInput.value);
+  if(routeIsVisible()){
+    const distance = routeDistanceKm();
+    radiusStatLabelEl.textContent = t("routeDistanceStat");
+    loopStatLabelEl.textContent = t("routeTimeStat");
+    radiusMetric.textContent = routeDistanceLabel(distance);
+    timeMetric.textContent = pace ? timeLabel(distance * pace) : "-";
+    return;
+  }
+  radiusStatLabelEl.textContent = t("radiusStat");
+  loopStatLabelEl.textContent = t("loopStat");
+  radiusMetric.textContent = formatKm(state.radiusKm);
+  timeMetric.textContent = pace ? timeLabel(state.radiusKm * pace) : "-";
+}
+
 function updateRoute(fit=false){
   const center = [state.lat, state.lng];
   const radiusMeters = state.radiusKm * 1000;
   centerMarker.setLatLng(center);
   routeCircle.setLatLng(center);
   routeCircle.setRadius(radiusMeters);
-  const pace = parsePaceMinutes(paceInput.value);
-  radiusMetric.textContent = formatKm(state.radiusKm);
-  timeMetric.textContent = pace ? timeLabel(state.radiusKm * pace) : "-";
+  syncRouteVisibility();
+  updateDistanceMetrics();
   if(fit) map.fitBounds(routeCircle.getBounds(), {padding:[30,30], maxZoom:15});
 }
 
@@ -408,6 +572,421 @@ function popupElement(location){
     wrap.appendChild(sourceLink);
   }
   return wrap;
+}
+
+function normalizeRoutePoints(points){
+  if(!Array.isArray(points)) return [];
+  return points.map(point=>{
+    const lat = Number(point && point.lat);
+    const lng = Number(point && (point.lng ?? point.lon));
+    return validCoord(lat, lng) ? {lat, lng} : null;
+  }).filter(Boolean);
+}
+
+function loadSavedRoute(){
+  try{
+    const raw = localStorage.getItem(ROUTE_STORAGE_KEY);
+    if(!raw) return false;
+    const parsed = JSON.parse(raw);
+    const points = normalizeRoutePoints(parsed.points || parsed);
+    if(points.length < 2){
+      localStorage.removeItem(ROUTE_STORAGE_KEY);
+      return false;
+    }
+    state.routePoints = points;
+    state.routeMode = "locked";
+    return true;
+  }catch(error){
+    localStorage.removeItem(ROUTE_STORAGE_KEY);
+    return false;
+  }
+}
+
+function saveDrawnRoute(){
+  if(!routeCanExport()) return;
+  const payload = {
+    savedAt:new Date().toISOString(),
+    points:state.routePoints
+  };
+  localStorage.setItem(ROUTE_STORAGE_KEY, JSON.stringify(payload));
+}
+
+function clearSavedRoute(){
+  localStorage.removeItem(ROUTE_STORAGE_KEY);
+}
+
+function renderRouteControls(){
+  const drawing = state.routeMode === "drawing";
+  const hasPoints = state.routePoints.length > 0;
+  const label = drawing ? t("drawingRoute") : hasPoints ? t("editRoute") : t("drawRoute");
+  routeDrawBtn.classList.toggle("active", drawing);
+  routeDrawBtn.setAttribute("aria-pressed", String(drawing));
+  routeDrawBtn.setAttribute("aria-label", label);
+  routeDrawBtn.setAttribute("title", label);
+  routeModeText.textContent = drawing ? t("drawingRoute") : hasPoints ? t("routeLocked") : t("drawRoute");
+  routeUndoBtn.textContent = t("undo");
+  routeDoneBtn.textContent = t("done");
+  routeStartOverBtn.textContent = t("startOver");
+  routeExportBtn.textContent = t("exportGpx");
+  routeUndoBtn.disabled = !drawing || state.routePoints.length <= 1;
+  routeDoneBtn.disabled = !drawing || state.routePoints.length < 2;
+  routeStartOverBtn.disabled = !drawing && !hasPoints;
+  routeExportBtn.disabled = !routeCanExport();
+}
+
+function routePointIcon(index, total){
+  const role = index === 0 ? "start" : index === total - 1 && total > 1 ? "end" : "mid";
+  return L.divIcon({
+    className:"",
+    html:`<div class="route-control-point ${role}"></div>`,
+    iconSize:[18,18],
+    iconAnchor:[9,9]
+  });
+}
+
+function pointToSegmentDistanceSquared(point, start, end){
+  const dx = end.x - start.x;
+  const dy = end.y - start.y;
+  if(dx === 0 && dy === 0){
+    const singleDx = point.x - start.x;
+    const singleDy = point.y - start.y;
+    return singleDx * singleDx + singleDy * singleDy;
+  }
+  const ratio = Math.max(0, Math.min(1, ((point.x - start.x) * dx + (point.y - start.y) * dy) / (dx * dx + dy * dy)));
+  const projectedX = start.x + ratio * dx;
+  const projectedY = start.y + ratio * dy;
+  const projectedDx = point.x - projectedX;
+  const projectedDy = point.y - projectedY;
+  return projectedDx * projectedDx + projectedDy * projectedDy;
+}
+
+function routeInsertionIndex(latlng){
+  if(state.routePoints.length < 2) return state.routePoints.length;
+  const clickPoint = map.latLngToLayerPoint(latlng);
+  let bestIndex = 1;
+  let bestDistance = Infinity;
+  for(let index = 1; index < state.routePoints.length; index += 1){
+    const start = map.latLngToLayerPoint(latLngFromPoint(state.routePoints[index - 1]));
+    const end = map.latLngToLayerPoint(latLngFromPoint(state.routePoints[index]));
+    const distance = pointToSegmentDistanceSquared(clickPoint, start, end);
+    if(distance < bestDistance){
+      bestDistance = distance;
+      bestIndex = index;
+    }
+  }
+  return bestIndex;
+}
+
+function updateDraggedRoutePoint(index, latlng){
+  if(!state.routePoints[index]) return;
+  state.routePoints[index] = pointFromLatLng(latlng);
+  drawnRouteLine.setLatLngs(state.routePoints.map(latLngFromPoint));
+  updateDistanceMetrics();
+}
+
+function renderDrawnRoute(){
+  if(!drawnRouteLine || !routePointLayer) return;
+  const latLngs = state.routePoints.map(latLngFromPoint);
+  drawnRouteLine.setLatLngs(latLngs);
+  drawnRouteLine.off("click");
+  drawnRouteLine.off("contextmenu");
+  if(state.routePoints.length > 0){
+    drawnRouteLine.on("click", event=>{
+      if(event.originalEvent) L.DomEvent.stop(event.originalEvent);
+      insertRouteControlPoint(event.latlng);
+    });
+    drawnRouteLine.on("contextmenu", event=>{
+      if(event.originalEvent) L.DomEvent.stop(event.originalEvent);
+      showRouteMenu(event.latlng);
+    });
+  }
+  routePointLayer.clearLayers();
+  const drawing = state.routeMode === "drawing";
+  state.routePoints.forEach((point, index)=>{
+    const marker = L.marker([point.lat, point.lng], {
+      icon:routePointIcon(index, state.routePoints.length),
+      draggable:drawing,
+      bubblingMouseEvents:false
+    });
+    marker.on("click", event=>{
+      if(event.originalEvent) L.DomEvent.stop(event.originalEvent);
+      if(!drawing) showDistancePopup(event.latlng);
+    });
+    marker.on("contextmenu", event=>{
+      if(event.originalEvent) L.DomEvent.stop(event.originalEvent);
+      showRouteMenu(event.latlng);
+    });
+    marker.on("dragstart", ()=>{
+      if(routeDistancePopupTimer) window.clearTimeout(routeDistancePopupTimer);
+      map.closePopup();
+    });
+    marker.on("drag", event=>{
+      updateDraggedRoutePoint(index, event.target.getLatLng());
+    });
+    marker.on("dragend", event=>{
+      updateDraggedRoutePoint(index, event.target.getLatLng());
+      renderDrawnRoute();
+      setStatusKey("routeControlPointMoved");
+    });
+    marker.addTo(routePointLayer);
+  });
+  syncRouteVisibility();
+  updateDistanceMetrics();
+  renderRouteControls();
+}
+
+function popupButton(label, className, disabled, onClick){
+  const button = document.createElement("button");
+  button.type = "button";
+  button.textContent = label;
+  if(className) button.className = className;
+  button.disabled = Boolean(disabled);
+  button.addEventListener("click", event=>{
+    event.preventDefault();
+    L.DomEvent.stop(event);
+    if(button.disabled) return;
+    map.closePopup();
+    onClick();
+  });
+  return button;
+}
+
+function routeMenuElement(){
+  const wrap = document.createElement("div");
+  wrap.className = "popup route-popup";
+  L.DomEvent.disableClickPropagation(wrap);
+  const title = document.createElement("b");
+  title.textContent = state.routeMode === "drawing" ? t("drawingRoute") : t("routeLocked");
+  wrap.appendChild(title);
+  const detail = document.createElement("p");
+  detail.textContent = routeDistanceLabel(routeDistanceKm());
+  wrap.appendChild(detail);
+  const actions = document.createElement("div");
+  actions.className = "route-popup-actions";
+  if(state.routeMode === "drawing"){
+    actions.appendChild(popupButton(t("undo"), "", state.routePoints.length <= 1, undoRoutePoint));
+    actions.appendChild(popupButton(t("done"), "primary", state.routePoints.length < 2, completeRoute));
+  }else{
+    actions.appendChild(popupButton(t("editRoute"), "primary", false, beginRouteDraw));
+  }
+  actions.appendChild(popupButton(t("startOver"), "accent", false, startOverRoute));
+  actions.appendChild(popupButton(t("exportGpx"), "", !routeCanExport(), exportGpx));
+  wrap.appendChild(actions);
+  return wrap;
+}
+
+function showRouteMenu(latlng){
+  if(!map) return;
+  if(routeDistancePopupTimer) window.clearTimeout(routeDistancePopupTimer);
+  L.popup({closeButton:true, autoClose:true})
+    .setLatLng(latlng)
+    .setContent(routeMenuElement())
+    .openOn(map);
+}
+
+function showDistancePopup(latlng){
+  if(!map) return;
+  if(routeDistancePopupTimer) window.clearTimeout(routeDistancePopupTimer);
+  const wrap = document.createElement("div");
+  wrap.className = "route-distance-pop";
+  const label = document.createElement("b");
+  label.textContent = t("routeDistanceStat");
+  const value = document.createElement("span");
+  value.textContent = routeDistanceLabel(routeDistanceKm());
+  wrap.append(label, value);
+  const popup = L.popup({closeButton:false, autoClose:true, closeOnClick:false, autoPan:false})
+    .setLatLng(latlng)
+    .setContent(wrap)
+    .openOn(map);
+  routeDistancePopupTimer = window.setTimeout(() => {
+    if(map && map.hasLayer(popup)) map.closePopup(popup);
+  }, 1400);
+}
+
+function showStartPointPopup(latlng){
+  const wrap = document.createElement("div");
+  wrap.className = "popup route-popup";
+  L.DomEvent.disableClickPropagation(wrap);
+  const title = document.createElement("b");
+  title.textContent = t("setStartingPoint");
+  wrap.appendChild(title);
+  const actions = document.createElement("div");
+  actions.className = "route-popup-actions";
+  actions.appendChild(popupButton(t("setStartingPoint"), "primary", false, () => setRouteStart(latlng)));
+  wrap.appendChild(actions);
+  L.popup({closeButton:true, autoClose:true})
+    .setLatLng(latlng)
+    .setContent(wrap)
+    .openOn(map);
+}
+
+function lockDrawZoom(focusLatLng){
+  if(!map) return;
+  if(!state.drawZoomRestore){
+    state.drawZoomRestore = {min:map.getMinZoom(), max:map.getMaxZoom()};
+  }
+  const focus = focusLatLng ? L.latLng(focusLatLng) : state.routePoints.length ? latLngFromPoint(state.routePoints[state.routePoints.length - 1]) : map.getCenter();
+  map.setView(focus, DRAW_ZOOM);
+  map.setMinZoom(DRAW_ZOOM);
+  map.setMaxZoom(DRAW_ZOOM);
+}
+
+function unlockDrawZoom(){
+  if(!map || !state.drawZoomRestore) return;
+  map.setMinZoom(state.drawZoomRestore.min);
+  map.setMaxZoom(state.drawZoomRestore.max);
+  state.drawZoomRestore = null;
+}
+
+function beginRouteDraw(focusLatLng){
+  state.routeMode = "drawing";
+  if(state.routePoints.length){
+    lockDrawZoom(focusLatLng);
+  }
+  renderDrawnRoute();
+  setStatusKey(state.routePoints.length ? "routeAddPrompt" : "routeStartPrompt");
+}
+
+function stopRouteDraw(){
+  unlockDrawZoom();
+  map.closePopup();
+  let statusKey = "routeDrawOff";
+  if(state.routePoints.length < 2){
+    state.routePoints = [];
+    state.routeMode = "empty";
+    clearSavedRoute();
+  }else{
+    state.routeMode = "locked";
+    saveDrawnRoute();
+    statusKey = "routeDone";
+  }
+  renderDrawnRoute();
+  setStatusKey(statusKey);
+}
+
+function toggleRouteDraw(){
+  if(state.routeMode === "drawing"){
+    stopRouteDraw();
+    return;
+  }
+  beginRouteDraw();
+}
+
+function setRouteStart(latlng){
+  state.routePoints = [pointFromLatLng(latlng)];
+  state.routeMode = "drawing";
+  lockDrawZoom(latlng);
+  renderDrawnRoute();
+  setStatusKey("routeStartSet");
+  showDistancePopup(latLngFromPoint(state.routePoints[0]));
+}
+
+function addRouteWaypoint(latlng){
+  state.routePoints.push(pointFromLatLng(latlng));
+  renderDrawnRoute();
+  setStatusKey("routeWaypointAdded");
+  showDistancePopup(latlng);
+}
+
+function insertRouteControlPoint(latlng){
+  if(state.routePoints.length < 2) return;
+  if(routeDistancePopupTimer) window.clearTimeout(routeDistancePopupTimer);
+  map.closePopup();
+  if(state.routeMode !== "drawing"){
+    state.routeMode = "drawing";
+    lockDrawZoom(latlng);
+  }
+  const insertAt = routeInsertionIndex(latlng);
+  state.routePoints.splice(insertAt, 0, pointFromLatLng(latlng));
+  renderDrawnRoute();
+  setStatusKey("routeControlPointAdded");
+}
+
+function undoRoutePoint(){
+  if(state.routeMode !== "drawing" || state.routePoints.length <= 1) return;
+  state.routePoints.pop();
+  renderDrawnRoute();
+  setStatusKey("routeUndoDone");
+  showDistancePopup(latLngFromPoint(state.routePoints[state.routePoints.length - 1]));
+}
+
+function startOverRoute(){
+  clearSavedRoute();
+  state.routePoints = [];
+  state.routeMode = "drawing";
+  unlockDrawZoom();
+  map.closePopup();
+  renderDrawnRoute();
+  setStatusKey("routeStartPrompt");
+}
+
+function completeRoute(){
+  if(state.routePoints.length < 2){
+    setStatusKey("routeNeedWaypoint");
+    return;
+  }
+  state.routeMode = "locked";
+  unlockDrawZoom();
+  map.closePopup();
+  saveDrawnRoute();
+  renderDrawnRoute();
+  setStatusKey("routeDone");
+}
+
+function handleRouteMapClick(event){
+  if(state.routeMode !== "drawing") return false;
+  if(state.routePoints.length === 0){
+    showStartPointPopup(event.latlng);
+    return true;
+  }
+  addRouteWaypoint(event.latlng);
+  return true;
+}
+
+function escapeXml(value){
+  return String(value).replace(/[<>&'"]/g, character=>({
+    "<":"&lt;",
+    ">":"&gt;",
+    "&":"&amp;",
+    "'":"&apos;",
+    '"':"&quot;"
+  }[character]));
+}
+
+function exportGpx(){
+  if(!routeCanExport()){
+    setStatusKey("gpxUnavailable");
+    return;
+  }
+  const now = new Date();
+  const name = "Run Planner Route";
+  const distance = routeDistanceLabel(routeDistanceKm());
+  const trackPoints = state.routePoints.map(point=>`      <trkpt lat="${point.lat.toFixed(8)}" lon="${point.lng.toFixed(8)}"></trkpt>`).join("\n");
+  const gpx = `<?xml version="1.0" encoding="UTF-8"?>
+<gpx version="1.1" creator="Run Planner" xmlns="http://www.topografix.com/GPX/1/1">
+  <metadata>
+    <name>${escapeXml(name)}</name>
+    <desc>${escapeXml(distance)}</desc>
+    <time>${now.toISOString()}</time>
+  </metadata>
+  <trk>
+    <name>${escapeXml(name)}</name>
+    <trkseg>
+${trackPoints}
+    </trkseg>
+  </trk>
+</gpx>
+`;
+  const blob = new Blob([gpx], {type:"application/gpx+xml;charset=utf-8"});
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = `run-planner-route-${now.toISOString().slice(0, 10)}.gpx`;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+  setStatusKey("gpxExported");
 }
 
 function markerIcon(location){
@@ -585,8 +1164,8 @@ function applyLanguage(){
   document.getElementById("areasLabel").textContent = t("areasLabel");
   document.getElementById("filterHint").textContent = t("filterHint");
   document.getElementById("storesStatLabel").textContent = t("storesStat");
-  document.getElementById("radiusStatLabel").textContent = t("radiusStat");
-  document.getElementById("loopStatLabel").textContent = t("loopStat");
+  document.querySelector(".route-draw-controls").setAttribute("aria-label", t("routeDrawLabel"));
+  renderRouteControls();
   if(state.lastStatusKey){
     statusEl.textContent = t(state.lastStatusKey, ...state.lastStatusArgs);
   }
@@ -607,26 +1186,47 @@ function init(){
   markerLayer = L.layerGroup().addTo(map);
   routeCircle = L.circle([state.lat, state.lng], {radius:state.radiusKm * 1000, color:"#1f8fff", weight:3, dashArray:"8 9", fillColor:"#22c55e", fillOpacity:.12}).addTo(map);
   centerMarker = L.marker([state.lat, state.lng], {draggable:true}).addTo(map);
+  drawnRouteLine = L.polyline([], {color:"#ef5f4a", weight:5, opacity:.92, lineCap:"round", lineJoin:"round", bubblingMouseEvents:false});
+  routePointLayer = L.layerGroup();
+  const restoredRoute = loadSavedRoute();
   centerMarker.on("dragend", event=>{
     const latlng = event.target.getLatLng();
     setCenter(latlng.lat, latlng.lng, false);
     setStatusKey("centerMoved");
   });
   map.on("click", event=>{
+    if(handleRouteMapClick(event)) return;
+    if(routeIsVisible()) return;
     setCenter(event.latlng.lat, event.latlng.lng, false);
     setStatusKey("centerMoved");
+  });
+  map.on("contextmenu", event=>{
+    if(state.routeMode === "drawing" || routeIsVisible()){
+      showRouteMenu(event.latlng);
+    }
   });
   applyLanguage();
   updateDrawerShift();
   setDrawerOpen(true);
-  renderMarkers();
+  renderMarkers(!restoredRoute);
+  renderDrawnRoute();
   updateRoute(false);
+  if(restoredRoute){
+    const bounds = drawnRouteLine.getBounds();
+    if(bounds.isValid()) map.fitBounds(bounds, {padding:[45,45], maxZoom:DRAW_ZOOM});
+    setStatusKey("routeRestored");
+  }
 }
 
 document.getElementById("langEn").onclick = ()=>setLanguage("en");
 document.getElementById("langJa").onclick = ()=>setLanguage("ja");
 document.getElementById("loadBtn").onclick = loadCenter;
 document.getElementById("gpsBtn").onclick = useGps;
+routeDrawBtn.onclick = toggleRouteDraw;
+routeUndoBtn.onclick = undoRoutePoint;
+routeDoneBtn.onclick = completeRoute;
+routeStartOverBtn.onclick = startOverRoute;
+routeExportBtn.onclick = exportGpx;
 drawerToggle.onclick = toggleDrawer;
 locationInput.addEventListener("keydown", event=>{if(event.key === "Enter"){event.preventDefault();loadCenter();}});
 radiusInput.addEventListener("input", ()=>setRadius(radiusInput.value, false));
