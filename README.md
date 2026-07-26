@@ -48,6 +48,6 @@ Use:
 - Use `Export GPX` after selecting `Done` to download the locked route as a GPX
   track. Exported geometry uses the same direct-line points shown on the map.
 - Use brand and area filters to reduce visible store markers.
-- Use the brand key to read marker abbreviations: `AF`, `WG`, and `CR` for CRISP SALAD WORKS.
+- Use the brand key to read marker abbreviations: `AF`, `WG`, `CR` for CRISP SALAD WORKS, and `SB` for Starbucks.
 - The runner emoji marker is a standalone running shop marker and is not part of the brand key.
 - Use the `EN` / `日本語` switch to change the UI language.

@@ -55,7 +55,7 @@
   .route-mode-text{font-size:12px;font-weight:900;color:#415247;line-height:1.25;}
   .route-actions{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;}
   .chips{display:flex;gap:7px;flex-wrap:wrap;}
-  .brand-tabs{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;}
+  .brand-tabs{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;}
   .chip{position:relative;display:inline-flex;align-items:center;justify-content:center;gap:7px;border:1px solid transparent;border-radius:999px;background:#eef4ef;color:#435348;padding:8px 10px;min-height:36px;font-size:12px;font-weight:900;cursor:pointer;user-select:none;transition:background .18s ease,color .18s ease,box-shadow .18s ease;}
   .chip.active{background:#17211b;color:#fff;box-shadow:0 8px 20px rgba(23,33,27,.16);}
   .chip input{position:absolute;opacity:0;pointer-events:none;}
@@ -76,6 +76,7 @@
   .brand-af{background:#7b1fa2;}
   .brand-wg{background:#006323;}
   .brand-cr{background:#d97706;}
+  .brand-sb{background:#006241;}
   .popup{min-width:210px;max-width:280px;border-radius:18px;}
   .popup b{display:block;font-size:14px;margin-bottom:4px;}
   .popup p{font-size:12px;margin:0 0 6px;color:#333;}
@@ -203,7 +204,8 @@ const ROUTE_STORAGE_KEY = "runPlannerDrawnRoute";
 const BRAND_META = {
   "Anytime Fitness": {short:"AF", className:"brand-af", labels:{en:"Anytime Fitness", ja:"エニタイムフィットネス"}},
   "WithGreen": {short:"WG", className:"brand-wg", labels:{en:"WithGreen", ja:"ウィズグリーン"}},
-  "CRISP": {short:"CR", className:"brand-cr", labels:{en:"CRISP SALAD WORKS", ja:"クリスプ・サラダワークス"}}
+  "CRISP": {short:"CR", className:"brand-cr", labels:{en:"CRISP SALAD WORKS", ja:"クリスプ・サラダワークス"}},
+  "Starbucks": {short:"SB", className:"brand-sb", labels:{en:"Starbucks", ja:"スターバックス"}}
 };
 const RUNNER_LOCATIONS = [
   {
