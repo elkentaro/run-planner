@@ -49,7 +49,8 @@ Use:
 - Use `Undo` to remove waypoints back to the starting point, `Done` to lock and
   save the route, and `Start over` to clear it and begin again.
 - Use `Export GPX` after selecting `Done` to download the locked route as a GPX
-  track. Exported geometry uses the same direct-line points shown on the map.
+  file. Exported geometry uses the same direct-line points shown on the map and
+  includes GPX 1.1 route and track data for broader app compatibility.
 - Use brand and area filters to reduce visible store markers.
 - Use the brand key to read marker abbreviations: `AF`, `WG`, `CR` for CRISP SALAD WORKS, and `SB` for Starbucks.
 - Toggle `Major stations` to show or hide small black landmark labels for roughly 100 high-traffic stations in the supported areas.

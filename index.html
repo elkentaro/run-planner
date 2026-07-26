@@ -140,7 +140,7 @@
         </div>
         <div class="control">
           <label for="locationInput" id="centerLabel">Center coordinates</label>
-          <input id="locationInput" type="text" value="35.562641,139.687246" autocomplete="off">
+          <input id="locationInput" type="text" value="35.685175,139.752800" autocomplete="off">
         </div>
         <div class="row run-settings">
           <div class="control">
@@ -211,11 +211,12 @@
 <script>
 const DATA = window.RUN_PLANNER_DATA || {locations:[], areas:[], counts:{byBrand:{}, byArea:{}}};
 const MAJOR_STATIONS = window.RUN_PLANNER_MAJOR_STATIONS || [];
-const DEFAULT_CENTER = {lat:35.562641,lng:139.687246};
+const DEFAULT_CENTER = {lat:35.685175,lng:139.752800};
 const GSI_TILE_URL = "https://cyberjapandata.gsi.go.jp/xyz/std/{z}/{x}/{y}.png";
 const GSI_ATTRIBUTION = '<a href="https://maps.gsi.go.jp/development/ichiran.html">地理院タイル</a>';
 const DRAW_ZOOM = 16;
 const ROUTE_STORAGE_KEY = "runPlannerDrawnRoute";
+const GPX_MIME_TYPE = "application/gpx+xml";
 const BRAND_META = {
   "Anytime Fitness": {short:"AF", className:"brand-af", labels:{en:"Anytime Fitness", ja:"エニタイムフィットネス"}},
   "WithGreen": {short:"WG", className:"brand-wg", labels:{en:"WithGreen", ja:"ウィズグリーン"}},
@@ -1057,27 +1058,46 @@ function exportGpx(){
   const now = new Date();
   const name = "Run Planner Route";
   const distance = routeDistanceLabel(routeDistanceKm());
-  const trackPoints = state.routePoints.map(point=>`      <trkpt lat="${point.lat.toFixed(8)}" lon="${point.lng.toFixed(8)}"></trkpt>`).join("\n");
+  const escapedName = escapeXml(name);
+  const escapedDistance = escapeXml(distance);
+  const routePoints = state.routePoints.map((point, index)=>{
+    const waypointName = index === 0 ? "Start" : index === state.routePoints.length - 1 ? "Finish" : `Waypoint ${index}`;
+    return `    <rtept lat="${point.lat.toFixed(8)}" lon="${point.lng.toFixed(8)}">
+      <name>${escapeXml(waypointName)}</name>
+    </rtept>`;
+  }).join("\n");
+  const trackPoints = state.routePoints.map(point=>`      <trkpt lat="${point.lat.toFixed(8)}" lon="${point.lng.toFixed(8)}" />`).join("\n");
   const gpx = `<?xml version="1.0" encoding="UTF-8"?>
-<gpx version="1.1" creator="Run Planner" xmlns="http://www.topografix.com/GPX/1/1">
+<gpx version="1.1" creator="Run Planner" xmlns="http://www.topografix.com/GPX/1/1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.topografix.com/GPX/1/1 http://www.topografix.com/GPX/1/1/gpx.xsd">
   <metadata>
-    <name>${escapeXml(name)}</name>
-    <desc>${escapeXml(distance)}</desc>
+    <name>${escapedName}</name>
+    <desc>${escapedDistance}</desc>
     <time>${now.toISOString()}</time>
   </metadata>
+  <rte>
+    <name>${escapedName}</name>
+    <desc>${escapedDistance}</desc>
+${routePoints}
+  </rte>
   <trk>
-    <name>${escapeXml(name)}</name>
+    <name>${escapedName}</name>
+    <desc>${escapedDistance}</desc>
+    <type>running</type>
     <trkseg>
 ${trackPoints}
     </trkseg>
   </trk>
 </gpx>
 `;
-  const blob = new Blob([gpx], {type:"application/gpx+xml;charset=utf-8"});
-  const url = URL.createObjectURL(blob);
+  const filename = `run-planner-route-${now.toISOString().slice(0, 10)}.gpx`;
+  const file = typeof File === "function"
+    ? new File([gpx], filename, {type:GPX_MIME_TYPE, lastModified:now.getTime()})
+    : new Blob([gpx], {type:GPX_MIME_TYPE});
+  const url = URL.createObjectURL(file);
   const link = document.createElement("a");
   link.href = url;
-  link.download = `run-planner-route-${now.toISOString().slice(0, 10)}.gpx`;
+  link.download = filename;
+  link.type = GPX_MIME_TYPE;
   document.body.appendChild(link);
   link.click();
   link.remove();
