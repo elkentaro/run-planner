@@ -62,18 +62,23 @@
   .route-mode-text{flex:1;min-width:0;font-size:12px;font-weight:900;color:#415247;line-height:1.25;}
   .route-distance-box{display:flex;align-items:center;justify-content:center;min-width:86px;height:38px;border:1px solid var(--line);border-radius:15px;background:#fff;padding:8px 10px;font-size:15px;font-weight:700;line-height:1.2;color:var(--ink);box-shadow:inset 0 1px 0 rgba(255,255,255,.7);}
   .route-actions{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;}
+  .route-footnote{font-size:11px;color:#647267;line-height:1.35;}
   .chips{display:flex;gap:7px;flex-wrap:wrap;}
-  .brand-tabs{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;}
-  .convenience-tabs{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;}
   .chip{position:relative;display:inline-flex;align-items:center;justify-content:center;gap:7px;border:1px solid transparent;border-radius:999px;background:#eef4ef;color:#435348;padding:8px 10px;min-height:36px;font-size:12px;font-weight:900;cursor:pointer;user-select:none;transition:background .18s ease,color .18s ease,box-shadow .18s ease;}
   .chip.active{background:#17211b;color:#fff;box-shadow:0 8px 20px rgba(23,33,27,.16);}
   .chip input{position:absolute;opacity:0;pointer-events:none;}
   .chip span{display:inline-flex;align-items:center;gap:5px;}
   .dot{width:10px;height:10px;border:1px solid var(--ink);border-radius:50%;display:inline-block;}
   .chip.active .dot{border-color:#fff;}
-  .brand-key{display:grid;grid-template-columns:1fr;gap:6px;border-radius:18px;background:linear-gradient(135deg,#f7fbf8,#fff7e8);padding:10px;border:1px solid #edf1e9;}
-  .brand-key-row{display:flex;align-items:center;gap:8px;font-size:12px;color:#405146;}
-  .brand-key-code{min-width:28px;font-weight:900;}
+  .map-element-list{display:grid;grid-template-columns:1fr;gap:7px;border-radius:18px;background:linear-gradient(135deg,#f7fbf8,#fff7e8);padding:10px;border:1px solid #edf1e9;}
+  .map-element-btn{position:relative;display:grid;grid-template-columns:auto minmax(38px,max-content) minmax(0,1fr) auto;align-items:center;gap:8px;width:100%;border:1px solid transparent;border-radius:14px;background:#eef4ef;color:#405146;padding:9px 10px;min-height:40px;font-size:12px;font-weight:800;line-height:1.2;text-align:left;cursor:pointer;user-select:none;transition:background .18s ease,color .18s ease,box-shadow .18s ease,border-color .18s ease;}
+  .map-element-btn.active{background:#17211b;color:#fff;box-shadow:0 8px 20px rgba(23,33,27,.16);}
+  .map-element-btn.disabled{opacity:.52;cursor:not-allowed;box-shadow:none;}
+  .map-element-btn input{position:absolute;opacity:0;pointer-events:none;}
+  .map-element-btn.active .dot{border-color:#fff;}
+  .map-element-code{font-weight:900;white-space:nowrap;}
+  .map-element-name{min-width:0;overflow-wrap:anywhere;}
+  .map-element-count{font-size:11px;font-weight:800;color:inherit;opacity:.72;white-space:nowrap;}
   .filter-hint{border-top:1px solid #e5eee8;padding-top:8px;font-size:11px;color:#5d6f64;line-height:1.35;}
   .status{border-top:1px solid #e5eee8;padding-top:8px;font-size:12px;color:var(--muted);min-height:26px;}
   .marker{width:24px;height:24px;border:2px solid #fff;border-radius:50%;color:#fff;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:900;box-shadow:0 3px 10px rgba(0,0,0,.28);}
@@ -121,8 +126,7 @@
     .lang-switch{width:112px;}
     .actions{grid-template-columns:repeat(2,1fr);}
     .btn{font-size:12px;padding:7px 5px;}
-    .brand-tabs{grid-template-columns:1fr;}
-    .convenience-tabs{grid-template-columns:1fr;}
+    .map-element-btn{grid-template-columns:auto minmax(32px,max-content) minmax(0,1fr) auto;padding:9px;}
     .run-settings{grid-template-columns:minmax(0,1fr) minmax(0,1fr) minmax(96px,.95fr);gap:6px;}
     .run-settings input,.run-settings select,.estimate-box,.estimate-value{font-size:14px;}
     .estimate-box{padding:8px;}
@@ -186,26 +190,18 @@
             <button class="btn ghost compact" id="routeStartOverBtn" type="button">Start over</button>
             <button class="btn ghost compact" id="routeExportBtn" type="button">Export GPX</button>
           </div>
+          <p class="route-footnote" id="routeDrawFootnote">Routes are straight-line only and do not snap to roads.</p>
         </div>
         <div class="status" id="status"></div>
       </div>
       <div class="pane-block filter-panel">
         <div class="control">
-          <label id="brandsLabel">Brands</label>
-          <div class="chips brand-tabs" id="brandFilters"></div>
-          <div class="brand-key" id="brandKey"></div>
+          <label id="mapElementsLabel">Map elements</label>
+          <div class="map-element-list" id="mapElementFilters"></div>
         </div>
         <div class="control">
           <label id="areasLabel">Areas</label>
           <div class="chips" id="areaFilters"></div>
-        </div>
-        <div class="control">
-          <label id="mapCuesLabel">Map cues</label>
-          <div class="chips" id="cueFilters"></div>
-        </div>
-        <div class="control">
-          <label id="convenienceLabel">Convenience</label>
-          <div class="chips convenience-tabs" id="convenienceFilters"></div>
         </div>
         <div class="filter-hint" id="filterHint">Click selected filters to unselect.</div>
       </div>
@@ -242,11 +238,11 @@ const BRAND_META = {
   "Starbucks": {short:"SB", className:"brand-sb", labels:{en:"Starbucks", ja:"スターバックス"}}
 };
 const CONVENIENCE_DATA_URL = "./convenience-stores.json";
-const CONVENIENCE_MIN_ZOOM = 13;
+const CONVENIENCE_MIN_ZOOM = 14;
 const CONVENIENCE_MARKER_LIMIT = 600;
 const CONVENIENCE_META = {
   "FamilyMart": {short:"Family Mart", markerText:"FM", className:"brand-fm", labels:{en:"Family Mart", ja:"ファミリーマート"}},
-  "7-Eleven": {short:"7/11", markerText:"7/11", className:"brand-seven", labels:{en:"7/11", ja:"セブン-イレブン"}}
+  "7-Eleven": {short:"7/11", markerText:"7/11", className:"brand-seven", labels:{en:"7-Eleven", ja:"セブン-イレブン"}}
 };
 const RUNNER_LOCATIONS = [
   {
@@ -280,9 +276,8 @@ const I18N = {
     gpsButton:"GPS",
     openPanel:"Open planner",
     hidePanel:"Close planner",
-    brandsLabel:"Brands",
+    mapElementsLabel:"Map elements",
     areasLabel:"Areas",
-    mapCuesLabel:"Map cues",
     majorStations:"Major stations",
     publicBathrooms:"Public bathrooms",
     publicBathroom:"Public bathroom",
@@ -297,9 +292,9 @@ const I18N = {
     unisex:"Unisex",
     male:"Male",
     female:"Female",
-    convenienceLabel:"Convenience",
     convenienceLoading:"Loading convenience stores",
     convenienceLoadFailed:"Could not load convenience stores",
+    convenienceZoomShort:zoom=>`zoom ${zoom}+`,
     convenienceZoomPrompt:zoom=>`Zoom to level ${zoom} or closer to show convenience stores.`,
     convenienceVisibleStatus:(visible,total)=>`${visible} convenience visible / ${total} selected`,
     filterHint:"Click selected filters to unselect.",
@@ -325,6 +320,7 @@ const I18N = {
     homepage:"Homepage",
     source:"Source",
     routeDrawLabel:"Route drawing",
+    routeDrawFootnote:"* Routes are straight-line only and do not snap to roads.",
     drawRoute:"Draw route",
     editRoute:"Edit route",
     drawingRoute:"Drawing route",
@@ -371,9 +367,8 @@ const I18N = {
     gpsButton:"現在地",
     openPanel:"プランナーを開く",
     hidePanel:"プランナーを閉じる",
-    brandsLabel:"ブランド",
+    mapElementsLabel:"地図要素",
     areasLabel:"エリア",
-    mapCuesLabel:"地図目印",
     majorStations:"主要駅",
     publicBathrooms:"公衆トイレ",
     publicBathroom:"公衆トイレ",
@@ -388,9 +383,9 @@ const I18N = {
     unisex:"共用",
     male:"男性用",
     female:"女性用",
-    convenienceLabel:"コンビニ",
     convenienceLoading:"コンビニを読み込み中",
     convenienceLoadFailed:"コンビニを読み込めませんでした",
+    convenienceZoomShort:zoom=>`ズーム${zoom}+`,
     convenienceZoomPrompt:zoom=>`ズーム${zoom}以上でコンビニを表示します。`,
     convenienceVisibleStatus:(visible,total)=>`${visible}件のコンビニを表示 / 選択中${total}件`,
     filterHint:"選択中の項目をクリックすると解除できます。",
@@ -416,6 +411,7 @@ const I18N = {
     homepage:"ホームページ",
     source:"ホームページ",
     routeDrawLabel:"ルート作成",
+    routeDrawFootnote:"* ルートは直線のみで、道路には自動スナップしません。",
     drawRoute:"ルートを描く",
     editRoute:"ルートを編集",
     drawingRoute:"ルート作成中",
@@ -454,7 +450,7 @@ const state = {
   convenienceBrands:new Set(),
   areas:new Set(DATA.areas || []),
   showMajorStations:localStorage.getItem("runPlannerMajorStations") !== "0",
-  showBathrooms:localStorage.getItem(BATHROOM_STORAGE_KEY) !== "0",
+  showBathrooms:localStorage.getItem(BATHROOM_STORAGE_KEY) === "1",
   bathroomStatus:"idle",
   bathroomCount:0,
   bathroomLoading:false,
@@ -1222,15 +1218,6 @@ function bathroomIcon(){
   });
 }
 
-function bathroomCueLabel(){
-  const label = `${BATHROOM_EMOJI} ${t("publicBathrooms")}`;
-  if(!state.showBathrooms) return label;
-  if(state.bathroomStatus === "loading") return `${label} (${t("bathroomLoading")})`;
-  if(state.bathroomStatus === "error") return `${label} (${t("bathroomLoadFailed")})`;
-  if(state.bathroomStatus === "zoom") return `${label} (${t("bathroomZoomPrompt", BATHROOM_MIN_ZOOM)})`;
-  return `${label} (${state.bathroomCount})`;
-}
-
 function bathroomTagValue(value){
   const text = String(value || "").trim();
   const normalized = text.toLowerCase();
@@ -1516,12 +1503,12 @@ function renderConvenienceStores(updateStatus=false){
     setStatusKey("convenienceLoading");
     ensureConvenienceStoresLoaded()
       .then(()=>{
-        renderConvenienceFilters();
+        renderFilters();
         renderConvenienceStores(updateStatus);
       })
       .catch(()=>{
         state.convenienceBrands.clear();
-        renderConvenienceFilters();
+        renderFilters();
         setStatusKey("convenienceLoadFailed");
       });
     return;
@@ -1626,50 +1613,133 @@ function checkboxChip(label, checked, onChange, dotClass){
   return chip;
 }
 
-function renderBrandKey(){
-  const brandKey = document.getElementById("brandKey");
-  brandKey.innerHTML = "";
-  for(const [brand, meta] of Object.entries(BRAND_META)){
-    const row = document.createElement("div");
-    row.className = "brand-key-row";
-    const dot = document.createElement("i");
-    dot.className = `dot ${meta.className}`;
-    const code = document.createElement("span");
-    code.className = "brand-key-code";
-    code.textContent = meta.short;
-    const name = document.createElement("span");
-    name.textContent = meta.labels && meta.labels[state.lang] ? meta.labels[state.lang] : brand;
-    row.append(dot, code, name);
-    brandKey.appendChild(row);
-  }
+function mapElementButton({code="", name, count="", checked, disabled=false, onChange, dotClass}){
+  const row = document.createElement("label");
+  row.className = "map-element-btn";
+  row.classList.toggle("active", checked);
+  row.classList.toggle("disabled", disabled);
+  row.setAttribute("aria-disabled", String(Boolean(disabled)));
+  const input = document.createElement("input");
+  input.type = "checkbox";
+  input.checked = checked;
+  input.disabled = Boolean(disabled);
+  input.addEventListener("change", () => {
+    if(input.disabled) return;
+    row.classList.toggle("active", input.checked);
+    onChange(input.checked);
+  });
+  const dot = document.createElement("i");
+  dot.className = `dot ${dotClass || ""}`.trim();
+  const codeEl = document.createElement("span");
+  codeEl.className = "map-element-code";
+  codeEl.textContent = code;
+  const nameEl = document.createElement("span");
+  nameEl.className = "map-element-name";
+  nameEl.textContent = name;
+  const countEl = document.createElement("span");
+  countEl.className = "map-element-count";
+  countEl.textContent = count === "" || count === null || count === undefined ? "" : String(count);
+  row.append(input, dot, codeEl, nameEl, countEl);
+  return row;
 }
 
-function renderConvenienceFilters(){
-  const convenienceFilters = document.getElementById("convenienceFilters");
-  convenienceFilters.innerHTML = "";
-  const counts = convenienceData && convenienceData.counts && convenienceData.counts.byBrand ? convenienceData.counts.byBrand : {};
+function metaLabel(meta, fallback){
+  return meta && meta.labels && meta.labels[state.lang] ? meta.labels[state.lang] : fallback;
+}
+
+function bathroomElementCount(){
+  if(!bathroomZoomAvailable()) return t("bathroomZoomPrompt", BATHROOM_MIN_ZOOM);
+  if(!state.showBathrooms) return "";
+  if(state.bathroomStatus === "loading") return t("bathroomLoading");
+  if(state.bathroomStatus === "error") return t("bathroomLoadFailed");
+  return state.bathroomCount;
+}
+
+function convenienceElementCount(count){
+  if(!convenienceZoomAvailable()) return t("convenienceZoomShort", CONVENIENCE_MIN_ZOOM);
+  return Number.isFinite(count) && count > 0 ? count : "";
+}
+
+function convenienceZoomAvailable(){
+  return Boolean(map && map.getZoom() >= CONVENIENCE_MIN_ZOOM);
+}
+
+function bathroomZoomAvailable(){
+  return Boolean(map && map.getZoom() >= BATHROOM_MIN_ZOOM);
+}
+
+function renderMapElementFilters(){
+  const mapElementFilters = document.getElementById("mapElementFilters");
+  mapElementFilters.innerHTML = "";
+  mapElementFilters.appendChild(mapElementButton({
+    code:state.lang === "ja" ? "駅" : "ST",
+    name:t("majorStations"),
+    count:MAJOR_STATIONS.length,
+    checked:state.showMajorStations,
+    dotClass:"station-dot",
+    onChange:checked=>{
+      state.showMajorStations = checked;
+      localStorage.setItem("runPlannerMajorStations", checked ? "1" : "0");
+      renderMajorStations();
+    }
+  }));
+  for(const [brand, meta] of Object.entries(BRAND_META)){
+    const count = DATA.counts && DATA.counts.byBrand ? DATA.counts.byBrand[brand] || 0 : 0;
+    mapElementFilters.appendChild(mapElementButton({
+      code:meta.short,
+      name:metaLabel(meta, brand),
+      count,
+      checked:state.brands.has(brand),
+      dotClass:meta.className,
+      onChange:checked=>{
+        checked ? state.brands.add(brand) : state.brands.delete(brand);
+        renderMarkers();
+      }
+    }));
+  }
+  const convenienceCounts = convenienceData && convenienceData.counts && convenienceData.counts.byBrand ? convenienceData.counts.byBrand : {};
+  const convenienceAvailable = convenienceZoomAvailable();
   for(const brand of convenienceFilterBrands()){
     const meta = CONVENIENCE_META[brand];
-    const count = Number(counts[brand]);
-    const countLabel = Number.isFinite(count) && count > 0 ? ` (${count})` : "";
-    convenienceFilters.appendChild(checkboxChip(`${meta.short}${countLabel}`, state.convenienceBrands.has(brand), checked=>{
-      checked ? state.convenienceBrands.add(brand) : state.convenienceBrands.delete(brand);
-      renderConvenienceStores(true);
-    }, meta.className));
+    const count = Number(convenienceCounts[brand]);
+    mapElementFilters.appendChild(mapElementButton({
+      code:meta.markerText || meta.short,
+      name:metaLabel(meta, brand),
+      count:convenienceElementCount(count),
+      checked:state.convenienceBrands.has(brand) && convenienceAvailable,
+      disabled:!convenienceAvailable,
+      dotClass:meta.className,
+      onChange:checked=>{
+        checked ? state.convenienceBrands.add(brand) : state.convenienceBrands.delete(brand);
+        renderConvenienceStores(true);
+      }
+    }));
   }
+  const bathroomAvailable = bathroomZoomAvailable();
+  mapElementFilters.appendChild(mapElementButton({
+    code:BATHROOM_EMOJI,
+    name:t("publicBathrooms"),
+    count:bathroomElementCount(),
+    checked:state.showBathrooms && bathroomAvailable,
+    disabled:!bathroomAvailable,
+    dotClass:"bathroom-dot",
+    onChange:checked=>{
+      state.showBathrooms = checked;
+      localStorage.setItem(BATHROOM_STORAGE_KEY, checked ? "1" : "0");
+      if(checked){
+        bathroomFailedKey = "";
+      }else{
+        if(bathroomFetchTimer) window.clearTimeout(bathroomFetchTimer);
+        if(bathroomFetchController) bathroomFetchController.abort();
+        bathroomFetchTimer = null;
+      }
+      renderBathrooms();
+    }
+  }));
 }
 
 function renderFilters(){
-  const brandFilters = document.getElementById("brandFilters");
-  brandFilters.innerHTML = "";
-  for(const [brand, meta] of Object.entries(BRAND_META)){
-    const count = DATA.counts && DATA.counts.byBrand ? DATA.counts.byBrand[brand] || 0 : 0;
-    brandFilters.appendChild(checkboxChip(`${meta.short} (${count})`, state.brands.has(brand), checked=>{
-      checked ? state.brands.add(brand) : state.brands.delete(brand);
-      renderMarkers();
-    }, meta.className));
-  }
-  renderBrandKey();
+  renderMapElementFilters();
   const areaFilters = document.getElementById("areaFilters");
   areaFilters.innerHTML = "";
   for(const area of DATA.areas || []){
@@ -1680,26 +1750,6 @@ function renderFilters(){
       renderConvenienceStores(true);
     }));
   }
-  const cueFilters = document.getElementById("cueFilters");
-  cueFilters.innerHTML = "";
-  cueFilters.appendChild(checkboxChip(`${t("majorStations")} (${MAJOR_STATIONS.length})`, state.showMajorStations, checked=>{
-    state.showMajorStations = checked;
-    localStorage.setItem("runPlannerMajorStations", checked ? "1" : "0");
-    renderMajorStations();
-  }, "station-dot"));
-  cueFilters.appendChild(checkboxChip(bathroomCueLabel(), state.showBathrooms, checked=>{
-    state.showBathrooms = checked;
-    localStorage.setItem(BATHROOM_STORAGE_KEY, checked ? "1" : "0");
-    if(checked){
-      bathroomFailedKey = "";
-    }else{
-      if(bathroomFetchTimer) window.clearTimeout(bathroomFetchTimer);
-      if(bathroomFetchController) bathroomFetchController.abort();
-      bathroomFetchTimer = null;
-    }
-    renderBathrooms();
-  }, "bathroom-dot"));
-  renderConvenienceFilters();
 }
 
 function loadCenter(){
@@ -1765,12 +1815,11 @@ function applyLanguage(){
   document.getElementById("gpsBtn").textContent = t("gpsButton");
   drawerToggle.setAttribute("aria-label", t(drawer.classList.contains("closed") ? "openPanel" : "hidePanel"));
   drawerToggleText.textContent = drawer.classList.contains("closed") ? ">" : "<";
-  document.getElementById("brandsLabel").textContent = t("brandsLabel");
+  document.getElementById("mapElementsLabel").textContent = t("mapElementsLabel");
   document.getElementById("areasLabel").textContent = t("areasLabel");
-  document.getElementById("mapCuesLabel").textContent = t("mapCuesLabel");
-  document.getElementById("convenienceLabel").textContent = t("convenienceLabel");
   document.getElementById("filterHint").textContent = t("filterHint");
   document.querySelector(".route-draw-controls").setAttribute("aria-label", t("routeDrawLabel"));
+  document.getElementById("routeDrawFootnote").textContent = t("routeDrawFootnote");
   renderRouteControls();
   if(state.lastStatusKey){
     statusEl.textContent = t(state.lastStatusKey, ...state.lastStatusArgs);

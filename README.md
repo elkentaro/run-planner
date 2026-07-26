@@ -63,9 +63,9 @@ Use:
 - Use `Export GPX` after selecting `Done` to download the locked route as a GPX
   file. Exported geometry uses the same direct-line points shown on the map and
   includes GPX 1.1 route and track data for broader app compatibility.
-- Use brand and area filters to reduce visible store markers.
-- Use the brand key to read marker abbreviations: `AF`, `WG`, `CR` for CRISP SALAD WORKS, and `SB` for Starbucks.
-- Convenience-store markers are off by default. Turn on `Family Mart` or `7/11` from the `Convenience` filter group; they appear only when zoomed in enough to keep the map readable.
+- Use `Map elements` / `地図要素` to toggle curated locations, convenience stores, major stations, and public bathrooms from one list.
+- Area filters sit below map elements and reduce visible store markers.
+- Convenience-store markers are off by default. Turn on `Family Mart` or `7/11` at zoom level 14 or closer.
 - Toggle `Major stations` to show or hide small black landmark labels for roughly 100 high-traffic stations in the supported areas.
 - Toggle `🚾 Public bathrooms` to show public-toilet markers from OpenStreetMap.
   They appear at zoom level 15 or closer, and can be clicked while drawing a
