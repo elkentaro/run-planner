@@ -37,10 +37,12 @@
   input,select{width:100%;border:1px solid var(--line);border-radius:15px;background:#fff;padding:10px 12px;min-height:42px;box-shadow:inset 0 1px 0 rgba(255,255,255,.7);}
   input:focus,select:focus{outline:3px solid rgba(34,197,94,.2);border-color:#5fcf83;}
   .row{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
-  .run-settings{grid-template-columns:minmax(0,1fr) minmax(0,1fr) minmax(92px,.9fr);align-items:end;}
-  .estimate-control{align-self:stretch;border:1px solid var(--line);border-radius:15px;background:#fff;padding:8px 10px;min-height:42px;}
-  .estimate-value{font-size:17px;font-weight:900;line-height:1.15;color:var(--ink);}
-  .estimate-distance{font-size:10px;color:var(--muted);line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .run-settings{grid-template-columns:minmax(0,1fr) minmax(0,1fr) minmax(104px,.95fr);align-items:start;}
+  .run-settings input,.run-settings select,.estimate-box{min-height:42px;font-size:15px;font-weight:800;line-height:1.2;}
+  .run-settings input,.run-settings select{padding-top:9px;padding-bottom:9px;}
+  .estimate-box{display:flex;align-items:center;gap:8px;width:100%;border:1px solid var(--line);border-radius:15px;background:#fff;padding:9px 10px;box-shadow:inset 0 1px 0 rgba(255,255,255,.7);}
+  .estimate-value{font:inherit;color:var(--ink);white-space:nowrap;}
+  .estimate-distance{min-width:0;margin-left:auto;font-size:10px;font-weight:700;color:var(--muted);line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
   .actions{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
   .btn{border:0;border-radius:16px;background:#fff;padding:10px;min-height:42px;cursor:pointer;font-size:14px;font-weight:900;box-shadow:0 6px 18px rgba(30,45,36,.1);}
   .btn:hover{transform:translateY(-1px);}
@@ -111,9 +113,9 @@
     .actions{grid-template-columns:repeat(2,1fr);}
     .btn{font-size:12px;padding:7px 5px;}
     .brand-tabs{grid-template-columns:1fr;}
-    .run-settings{grid-template-columns:minmax(0,1fr) minmax(0,1fr) minmax(88px,.9fr);gap:6px;}
-    .estimate-control{padding:7px 8px;}
-    .estimate-value{font-size:15px;}
+    .run-settings{grid-template-columns:minmax(0,1fr) minmax(0,1fr) minmax(96px,.95fr);gap:6px;}
+    .run-settings input,.run-settings select,.estimate-box{font-size:14px;}
+    .estimate-box{padding:8px;}
   }
 </style>
 </head>
@@ -146,10 +148,12 @@
             <label for="paceInput" id="paceLabel">Pace min/km</label>
             <input id="paceInput" type="text" value="8:00">
           </div>
-          <div class="control estimate-control">
+          <div class="control">
             <label id="loopStatLabel">Estimated time</label>
-            <div class="estimate-value" id="timeMetric">-</div>
-            <div class="estimate-distance"><span id="radiusStatLabel">Radius</span> <span id="radiusMetric">-</span></div>
+            <div class="estimate-box">
+              <span class="estimate-value" id="timeMetric">-</span>
+              <span class="estimate-distance"><span id="radiusStatLabel">Radius</span> <span id="radiusMetric">-</span></span>
+            </div>
           </div>
         </div>
         <div class="actions">
