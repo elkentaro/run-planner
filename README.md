@@ -7,6 +7,7 @@ Files:
 - `index.html` - the standalone map UI
 - `locations.js` - generated store overlay data
 - `major-stations.js` - generated major-station visual cue data
+- `convenience-stores.json` - generated convenience-store overlay data, loaded only when enabled
 
 Rebuild the store data:
 
@@ -14,8 +15,19 @@ Rebuild the store data:
 python3 scripts/build_static_run_planner_data.py
 ```
 
-The page uses public GSI raster tiles and the Leaflet CDN. It does not call the
-CardioTrack Flask app or use local MBTiles.
+Rebuild the convenience-store data:
+
+```bash
+python3 scripts/download_convenience_stores.py
+```
+
+This currently downloads FamilyMart and 7-Eleven for Tokyo, Kanagawa, Saitama,
+Chiba, and Tochigi. Lawson is intentionally not included yet because a reliable
+source is not wired into the downloader.
+
+The page uses public GSI raster tiles, the Leaflet CDN, and the OpenStreetMap
+Overpass API when public bathrooms are enabled. It does not call the CardioTrack
+Flask app or use local MBTiles.
 
 GitHub Pages:
 
@@ -53,6 +65,10 @@ Use:
   includes GPX 1.1 route and track data for broader app compatibility.
 - Use brand and area filters to reduce visible store markers.
 - Use the brand key to read marker abbreviations: `AF`, `WG`, `CR` for CRISP SALAD WORKS, and `SB` for Starbucks.
+- Convenience-store markers are off by default. Turn on `Family Mart` or `7/11` from the `Convenience` filter group; they appear only when zoomed in enough to keep the map readable.
 - Toggle `Major stations` to show or hide small black landmark labels for roughly 100 high-traffic stations in the supported areas.
+- Toggle `🚾 Public bathrooms` to show public-toilet markers from OpenStreetMap.
+  They appear at zoom level 15 or closer, and can be clicked while drawing a
+  route to add the bathroom as a waypoint or goal.
 - The runner emoji marker is a standalone running shop marker and is not part of the brand key.
 - Use the `EN` / `日本語` switch to change the UI language.

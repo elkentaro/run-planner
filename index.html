@@ -64,6 +64,7 @@
   .route-actions{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;}
   .chips{display:flex;gap:7px;flex-wrap:wrap;}
   .brand-tabs{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;}
+  .convenience-tabs{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;}
   .chip{position:relative;display:inline-flex;align-items:center;justify-content:center;gap:7px;border:1px solid transparent;border-radius:999px;background:#eef4ef;color:#435348;padding:8px 10px;min-height:36px;font-size:12px;font-weight:900;cursor:pointer;user-select:none;transition:background .18s ease,color .18s ease,box-shadow .18s ease;}
   .chip.active{background:#17211b;color:#fff;box-shadow:0 8px 20px rgba(23,33,27,.16);}
   .chip input{position:absolute;opacity:0;pointer-events:none;}
@@ -76,12 +77,17 @@
   .filter-hint{border-top:1px solid #e5eee8;padding-top:8px;font-size:11px;color:#5d6f64;line-height:1.35;}
   .status{border-top:1px solid #e5eee8;padding-top:8px;font-size:12px;color:var(--muted);min-height:26px;}
   .marker{width:24px;height:24px;border:2px solid #fff;border-radius:50%;color:#fff;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:900;box-shadow:0 3px 10px rgba(0,0,0,.28);}
+  .convenience-marker{width:30px;height:22px;border-radius:999px;font-size:8px;border-width:2px;opacity:.96;}
   .runner-marker{width:32px;height:32px;border:2px solid #fff;border-radius:50%;background:#111f18;display:flex;align-items:center;justify-content:center;font-size:18px;line-height:1;box-shadow:0 4px 14px rgba(0,0,0,.32);}
+  .bathroom-marker{width:30px;height:30px;border:2px solid #fff;border-radius:50%;background:#0f766e;display:flex;align-items:center;justify-content:center;font-size:19px;line-height:1;box-shadow:0 4px 14px rgba(0,0,0,.32);}
   .brand-af{background:#7b1fa2;}
   .brand-wg{background:#006323;}
   .brand-cr{background:#d97706;}
   .brand-sb{background:#006241;}
+  .brand-fm{background:#0b74ff;}
+  .brand-seven{background:#e23d28;}
   .station-dot{background:#111;border-color:#111;}
+  .bathroom-dot{background:#0f766e;border-color:#0f766e;}
   .major-station-icon{background:transparent;border:0;pointer-events:none;}
   .major-station-label{display:inline-block;max-width:145px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;border-radius:4px;background:rgba(10,10,10,.88);color:#fff;padding:3px 7px;font-size:14px;font-weight:400;line-height:1.2;box-shadow:0 2px 7px rgba(0,0,0,.24);pointer-events:none;}
   .popup{min-width:210px;max-width:280px;border-radius:18px;}
@@ -116,6 +122,7 @@
     .actions{grid-template-columns:repeat(2,1fr);}
     .btn{font-size:12px;padding:7px 5px;}
     .brand-tabs{grid-template-columns:1fr;}
+    .convenience-tabs{grid-template-columns:1fr;}
     .run-settings{grid-template-columns:minmax(0,1fr) minmax(0,1fr) minmax(96px,.95fr);gap:6px;}
     .run-settings input,.run-settings select,.estimate-box,.estimate-value{font-size:14px;}
     .estimate-box{padding:8px;}
@@ -196,6 +203,10 @@
           <label id="mapCuesLabel">Map cues</label>
           <div class="chips" id="cueFilters"></div>
         </div>
+        <div class="control">
+          <label id="convenienceLabel">Convenience</label>
+          <div class="chips convenience-tabs" id="convenienceFilters"></div>
+        </div>
         <div class="filter-hint" id="filterHint">Click selected filters to unselect.</div>
       </div>
     </div>
@@ -217,11 +228,25 @@ const GSI_ATTRIBUTION = '<a href="https://maps.gsi.go.jp/development/ichiran.htm
 const DRAW_ZOOM = 16;
 const ROUTE_STORAGE_KEY = "runPlannerDrawnRoute";
 const GPX_MIME_TYPE = "application/gpx+xml";
+const BATHROOM_STORAGE_KEY = "runPlannerBathrooms";
+const BATHROOM_EMOJI = "🚾";
+const BATHROOM_MIN_ZOOM = 15;
+const BATHROOM_MARKER_LIMIT = 500;
+const BATHROOM_ENDPOINT = "https://overpass-api.de/api/interpreter";
+const BATHROOM_ATTRIBUTION = 'Bathroom data &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap contributors</a>';
+const BATHROOM_EXCLUDED_ACCESS = new Set(["private", "customers", "no"]);
 const BRAND_META = {
   "Anytime Fitness": {short:"AF", className:"brand-af", labels:{en:"Anytime Fitness", ja:"エニタイムフィットネス"}},
   "WithGreen": {short:"WG", className:"brand-wg", labels:{en:"WithGreen", ja:"ウィズグリーン"}},
   "CRISP": {short:"CR", className:"brand-cr", labels:{en:"CRISP SALAD WORKS", ja:"クリスプ・サラダワークス"}},
   "Starbucks": {short:"SB", className:"brand-sb", labels:{en:"Starbucks", ja:"スターバックス"}}
+};
+const CONVENIENCE_DATA_URL = "./convenience-stores.json";
+const CONVENIENCE_MIN_ZOOM = 13;
+const CONVENIENCE_MARKER_LIMIT = 600;
+const CONVENIENCE_META = {
+  "FamilyMart": {short:"Family Mart", markerText:"FM", className:"brand-fm", labels:{en:"Family Mart", ja:"ファミリーマート"}},
+  "7-Eleven": {short:"7/11", markerText:"7/11", className:"brand-seven", labels:{en:"7/11", ja:"セブン-イレブン"}}
 };
 const RUNNER_LOCATIONS = [
   {
@@ -259,6 +284,24 @@ const I18N = {
     areasLabel:"Areas",
     mapCuesLabel:"Map cues",
     majorStations:"Major stations",
+    publicBathrooms:"Public bathrooms",
+    publicBathroom:"Public bathroom",
+    bathroomLoading:"loading",
+    bathroomLoadFailed:"failed",
+    bathroomZoomPrompt:zoom=>`zoom ${zoom}+`,
+    openingHours:"Hours",
+    access:"Access",
+    fee:"Fee",
+    wheelchair:"Wheelchair",
+    changingTable:"Changing table",
+    unisex:"Unisex",
+    male:"Male",
+    female:"Female",
+    convenienceLabel:"Convenience",
+    convenienceLoading:"Loading convenience stores",
+    convenienceLoadFailed:"Could not load convenience stores",
+    convenienceZoomPrompt:zoom=>`Zoom to level ${zoom} or closer to show convenience stores.`,
+    convenienceVisibleStatus:(visible,total)=>`${visible} convenience visible / ${total} selected`,
     filterHint:"Click selected filters to unselect.",
     storesStat:"Stores",
     radiusStat:"Radius",
@@ -297,7 +340,7 @@ const I18N = {
     routeAddPrompt:"Click the map to add waypoints.",
     routeStartSet:"Starting point set",
     routeWaypointAdded:"Waypoint added",
-    routeLocationWaypointAdded:"Location added as waypoint",
+    routeLocationWaypointAdded:"Map point added as waypoint",
     routeControlPointAdded:"Control point added",
     routeControlPointMoved:"Control point moved",
     routeUndoDone:"Waypoint removed",
@@ -332,6 +375,24 @@ const I18N = {
     areasLabel:"エリア",
     mapCuesLabel:"地図目印",
     majorStations:"主要駅",
+    publicBathrooms:"公衆トイレ",
+    publicBathroom:"公衆トイレ",
+    bathroomLoading:"読込中",
+    bathroomLoadFailed:"失敗",
+    bathroomZoomPrompt:zoom=>`ズーム${zoom}+`,
+    openingHours:"利用時間",
+    access:"アクセス",
+    fee:"料金",
+    wheelchair:"車いす",
+    changingTable:"おむつ交換台",
+    unisex:"共用",
+    male:"男性用",
+    female:"女性用",
+    convenienceLabel:"コンビニ",
+    convenienceLoading:"コンビニを読み込み中",
+    convenienceLoadFailed:"コンビニを読み込めませんでした",
+    convenienceZoomPrompt:zoom=>`ズーム${zoom}以上でコンビニを表示します。`,
+    convenienceVisibleStatus:(visible,total)=>`${visible}件のコンビニを表示 / 選択中${total}件`,
     filterHint:"選択中の項目をクリックすると解除できます。",
     storesStat:"店舗",
     radiusStat:"半径",
@@ -370,7 +431,7 @@ const I18N = {
     routeAddPrompt:"地図をクリックして経由点を追加します。",
     routeStartSet:"開始地点を設定しました",
     routeWaypointAdded:"経由点を追加しました",
-    routeLocationWaypointAdded:"店舗を経由点に追加しました",
+    routeLocationWaypointAdded:"地点を経由点に追加しました",
     routeControlPointAdded:"コントロールポイントを追加しました",
     routeControlPointMoved:"コントロールポイントを移動しました",
     routeUndoDone:"経由点を戻しました",
@@ -390,8 +451,13 @@ const state = {
   lng:DEFAULT_CENTER.lng,
   radiusKm:2,
   brands:new Set(Object.keys(BRAND_META)),
+  convenienceBrands:new Set(),
   areas:new Set(DATA.areas || []),
   showMajorStations:localStorage.getItem("runPlannerMajorStations") !== "0",
+  showBathrooms:localStorage.getItem(BATHROOM_STORAGE_KEY) !== "0",
+  bathroomStatus:"idle",
+  bathroomCount:0,
+  bathroomLoading:false,
   lang:localStorage.getItem("runPlannerLang") === "ja" ? "ja" : "en",
   routeMode:"empty",
   routePoints:[],
@@ -399,7 +465,15 @@ const state = {
   lastStatusKey:"clickPrompt",
   lastStatusArgs:[]
 };
-let map, centerMarker, routeCircle, markerLayer, majorStationLayer, drawnRouteLine, routePointLayer, routeDistancePopupTimer;
+let convenienceData = null;
+let convenienceLoadPromise = null;
+let bathroomFetchBounds = null;
+let bathroomFetchController = null;
+let bathroomFetchTimer = null;
+let bathroomFetchId = 0;
+let bathroomFailedKey = "";
+const bathroomById = new Map();
+let map, centerMarker, routeCircle, markerLayer, convenienceLayer, bathroomLayer, majorStationLayer, drawnRouteLine, routePointLayer, routeDistancePopupTimer;
 
 const locationInput = document.getElementById("locationInput");
 const radiusInput = document.getElementById("radiusInput");
@@ -1116,6 +1190,18 @@ function markerIcon(location){
   });
 }
 
+function convenienceIcon(location){
+  const meta = CONVENIENCE_META[location.brand] || {short:location.short || "CV", markerText:location.short || "CV", className:"brand-fm"};
+  const markerText = meta.markerText || meta.short;
+  return L.divIcon({
+    className:"",
+    html:`<div class="marker convenience-marker ${meta.className}">${escapeHtml(markerText)}</div>`,
+    iconSize:[30,22],
+    iconAnchor:[15,11],
+    popupAnchor:[0,-11]
+  });
+}
+
 function runnerIcon(){
   return L.divIcon({
     className:"",
@@ -1124,6 +1210,238 @@ function runnerIcon(){
     iconAnchor:[16,16],
     popupAnchor:[0,-16]
   });
+}
+
+function bathroomIcon(){
+  return L.divIcon({
+    className:"",
+    html:`<div class="bathroom-marker" aria-hidden="true">${BATHROOM_EMOJI}</div>`,
+    iconSize:[30,30],
+    iconAnchor:[15,15],
+    popupAnchor:[0,-15]
+  });
+}
+
+function bathroomCueLabel(){
+  const label = `${BATHROOM_EMOJI} ${t("publicBathrooms")}`;
+  if(!state.showBathrooms) return label;
+  if(state.bathroomStatus === "loading") return `${label} (${t("bathroomLoading")})`;
+  if(state.bathroomStatus === "error") return `${label} (${t("bathroomLoadFailed")})`;
+  if(state.bathroomStatus === "zoom") return `${label} (${t("bathroomZoomPrompt", BATHROOM_MIN_ZOOM)})`;
+  return `${label} (${state.bathroomCount})`;
+}
+
+function bathroomTagValue(value){
+  const text = String(value || "").trim();
+  const normalized = text.toLowerCase();
+  const jaValues = {
+    yes:"あり",
+    no:"なし",
+    limited:"一部あり",
+    public:"公開",
+    permissive:"利用可",
+    free:"無料"
+  };
+  if(state.lang === "ja" && jaValues[normalized]) return jaValues[normalized];
+  return text;
+}
+
+function bathroomDisplayName(tags){
+  if(state.lang === "ja") return tags["name:ja"] || tags.name || tags["name:en"] || t("publicBathroom");
+  return tags["name:en"] || tags.name || tags["name:ja"] || t("publicBathroom");
+}
+
+function bathroomDetailLines(tags){
+  const fields = [
+    ["access", "access"],
+    ["fee", "fee"],
+    ["wheelchair", "wheelchair"],
+    ["changing_table", "changingTable"],
+    ["unisex", "unisex"],
+    ["male", "male"],
+    ["female", "female"]
+  ];
+  const lines = [];
+  for(const [tag, labelKey] of fields){
+    if(tags[tag]) lines.push(`${t(labelKey)}: ${bathroomTagValue(tags[tag])}`);
+  }
+  return lines;
+}
+
+function bathroomLocation(item){
+  const tags = item.tags || {};
+  const query = `${item.lat.toFixed(7)},${item.lng.toFixed(7)}`;
+  const details = bathroomDetailLines(tags);
+  return {
+    id:item.id,
+    name:bathroomDisplayName(tags),
+    lat:item.lat,
+    lng:item.lng,
+    hours:tags.opening_hours ? `${t("openingHours")}: ${tags.opening_hours}` : "",
+    note:details.join("; "),
+    mapUrl:`https://www.google.com/maps/search/?api=1&query=${query}`,
+    url:`https://www.openstreetmap.org/${item.osmType}/${item.osmId}`
+  };
+}
+
+function bathroomIsPublic(tags){
+  const access = String(tags.access || tags["toilets:access"] || "").toLowerCase();
+  return !access.split(/[;,]/).some(part=>BATHROOM_EXCLUDED_ACCESS.has(part.trim()));
+}
+
+function bathroomFromOsmElement(element){
+  const center = element.center || {};
+  const lat = Number(element.lat ?? center.lat);
+  const lng = Number(element.lon ?? center.lon);
+  const tags = element.tags || {};
+  if(tags.amenity !== "toilets" || !validCoord(lat, lng) || !bathroomIsPublic(tags)) return null;
+  return {
+    id:`osm-${element.type}-${element.id}`,
+    osmType:element.type,
+    osmId:element.id,
+    lat,
+    lng,
+    tags
+  };
+}
+
+function bathroomBoundsKey(bounds){
+  return [
+    bounds.getSouth().toFixed(3),
+    bounds.getWest().toFixed(3),
+    bounds.getNorth().toFixed(3),
+    bounds.getEast().toFixed(3)
+  ].join(",");
+}
+
+function bathroomQuery(bounds){
+  const south = bounds.getSouth().toFixed(7);
+  const west = bounds.getWest().toFixed(7);
+  const north = bounds.getNorth().toFixed(7);
+  const east = bounds.getEast().toFixed(7);
+  return `[out:json][timeout:18];
+(
+  node["amenity"="toilets"](${south},${west},${north},${east});
+  way["amenity"="toilets"](${south},${west},${north},${east});
+  relation["amenity"="toilets"](${south},${west},${north},${east});
+);
+out center ${BATHROOM_MARKER_LIMIT};`;
+}
+
+function queueBathroomFetch(){
+  if(!state.showBathrooms || !map || map.getZoom() < BATHROOM_MIN_ZOOM) return;
+  if(bathroomFetchTimer) window.clearTimeout(bathroomFetchTimer);
+  state.bathroomLoading = true;
+  state.bathroomStatus = "loading";
+  bathroomFetchTimer = window.setTimeout(fetchBathroomsForCurrentView, 300);
+}
+
+async function fetchBathroomsForCurrentView(){
+  bathroomFetchTimer = null;
+  if(!state.showBathrooms || !map || map.getZoom() < BATHROOM_MIN_ZOOM){
+    state.bathroomLoading = false;
+    renderBathrooms();
+    return;
+  }
+  const currentBounds = map.getBounds();
+  if(bathroomFetchBounds && bathroomFetchBounds.contains(currentBounds)){
+    state.bathroomLoading = false;
+    renderBathrooms();
+    return;
+  }
+  const fetchBounds = currentBounds.pad(0.35);
+  const boundsKey = bathroomBoundsKey(fetchBounds);
+  if(bathroomFailedKey === boundsKey && state.bathroomStatus === "error"){
+    state.bathroomLoading = false;
+    renderFilters();
+    return;
+  }
+  if(bathroomFetchController) bathroomFetchController.abort();
+  const controller = new AbortController();
+  bathroomFetchController = controller;
+  const requestId = ++bathroomFetchId;
+  try{
+    const response = await fetch(`${BATHROOM_ENDPOINT}?data=${encodeURIComponent(bathroomQuery(fetchBounds))}`, {
+      signal:controller.signal,
+      headers:{Accept:"application/json"}
+    });
+    if(!response.ok) throw new Error(`Overpass ${response.status}`);
+    const payload = await response.json();
+    if(requestId !== bathroomFetchId) return;
+    for(const element of payload.elements || []){
+      const item = bathroomFromOsmElement(element);
+      if(item) bathroomById.set(item.id, item);
+    }
+    bathroomFetchBounds = fetchBounds;
+    bathroomFailedKey = "";
+    state.bathroomStatus = "ready";
+  }catch(error){
+    if(error.name === "AbortError") return;
+    if(requestId !== bathroomFetchId) return;
+    bathroomFailedKey = boundsKey;
+    state.bathroomStatus = "error";
+  }finally{
+    if(requestId === bathroomFetchId){
+      state.bathroomLoading = false;
+      bathroomFetchController = null;
+      renderBathrooms();
+    }
+  }
+}
+
+function visibleBathrooms(){
+  if(!state.showBathrooms || !map || map.getZoom() < BATHROOM_MIN_ZOOM) return [];
+  const bounds = map.getBounds().pad(0.03);
+  return Array.from(bathroomById.values())
+    .filter(item=>bounds.contains([item.lat, item.lng]))
+    .slice(0, BATHROOM_MARKER_LIMIT);
+}
+
+function renderBathrooms(updateFilters=true){
+  if(!bathroomLayer || !map) return;
+  bathroomLayer.clearLayers();
+  if(!state.showBathrooms){
+    state.bathroomCount = 0;
+    state.bathroomStatus = "idle";
+    state.bathroomLoading = false;
+    if(updateFilters) renderFilters();
+    return;
+  }
+  if(map.getZoom() < BATHROOM_MIN_ZOOM){
+    state.bathroomCount = 0;
+    state.bathroomStatus = "zoom";
+    state.bathroomLoading = false;
+    if(updateFilters) renderFilters();
+    return;
+  }
+  const currentBounds = map.getBounds();
+  const fetchBounds = currentBounds.pad(0.35);
+  const needsFetch = !bathroomFetchBounds || !bathroomFetchBounds.contains(currentBounds);
+  if(needsFetch && bathroomFailedKey !== bathroomBoundsKey(fetchBounds)){
+    queueBathroomFetch();
+  }
+  const items = visibleBathrooms();
+  state.bathroomCount = items.length;
+  if(!state.bathroomLoading && state.bathroomStatus !== "error"){
+    state.bathroomStatus = "ready";
+  }
+  for(const item of items){
+    const location = bathroomLocation(item);
+    const marker = L.marker([location.lat, location.lng], {
+      icon:bathroomIcon(),
+      title:location.name,
+      zIndexOffset:-450
+    });
+    marker.on("click", event=>{
+      if(addLocationWaypoint(location)){
+        if(event.originalEvent) L.DomEvent.stop(event.originalEvent);
+        return;
+      }
+      marker.bindPopup(popupElement(location)).openPopup();
+    });
+    marker.addTo(bathroomLayer);
+  }
+  if(updateFilters) renderFilters();
 }
 
 function stationDisplayName(station){
@@ -1146,6 +1464,93 @@ function visibleLocations(){
     if(!state.areas.has(location.area)) return false;
     return true;
   });
+}
+
+function convenienceFilterBrands(){
+  return Object.keys(CONVENIENCE_META);
+}
+
+function ensureConvenienceStoresLoaded(){
+  if(convenienceData) return Promise.resolve(convenienceData);
+  if(!convenienceLoadPromise){
+    convenienceLoadPromise = fetch(CONVENIENCE_DATA_URL, {cache:"no-store"})
+      .then(response=>{
+        if(!response.ok) throw new Error(`HTTP ${response.status}`);
+        return response.json();
+      })
+      .then(data=>{
+        convenienceData = {
+          generatedAt:data.generatedAt || "",
+          areas:Array.isArray(data.areas) ? data.areas : [],
+          counts:data.counts || {total:0, byBrand:{}, byArea:{}},
+          stores:Array.isArray(data.stores) ? data.stores : []
+        };
+        convenienceLoadPromise = null;
+        return convenienceData;
+      })
+      .catch(error=>{
+        convenienceLoadPromise = null;
+        throw error;
+      });
+  }
+  return convenienceLoadPromise;
+}
+
+function convenienceCandidates(){
+  if(!convenienceData) return [];
+  return (convenienceData.stores || []).filter(location=>{
+    if(!state.convenienceBrands.has(location.brand)) return false;
+    if(!state.areas.has(location.area)) return false;
+    return true;
+  });
+}
+
+function renderConvenienceStores(updateStatus=false){
+  if(!convenienceLayer) return;
+  convenienceLayer.clearLayers();
+  if(!state.convenienceBrands.size){
+    if(updateStatus) setStatusKey("visibleStatus", visibleLocations().length, (DATA.locations || []).length);
+    return;
+  }
+  if(!convenienceData){
+    setStatusKey("convenienceLoading");
+    ensureConvenienceStoresLoaded()
+      .then(()=>{
+        renderConvenienceFilters();
+        renderConvenienceStores(updateStatus);
+      })
+      .catch(()=>{
+        state.convenienceBrands.clear();
+        renderConvenienceFilters();
+        setStatusKey("convenienceLoadFailed");
+      });
+    return;
+  }
+  const candidates = convenienceCandidates();
+  if(!map || map.getZoom() < CONVENIENCE_MIN_ZOOM){
+    if(updateStatus) setStatusKey("convenienceZoomPrompt", CONVENIENCE_MIN_ZOOM);
+    return;
+  }
+  const bounds = map.getBounds().pad(0.12);
+  const visible = candidates
+    .filter(location=>bounds.contains([location.lat, location.lng]))
+    .slice(0, CONVENIENCE_MARKER_LIMIT);
+  for(const location of visible){
+    const marker = L.marker([location.lat, location.lng], {
+      icon:convenienceIcon(location),
+      title:location.name,
+      zIndexOffset:-350
+    });
+    marker.on("click", event=>{
+      if(addLocationWaypoint(location)){
+        if(event.originalEvent) L.DomEvent.stop(event.originalEvent);
+        return;
+      }
+      marker.bindPopup(popupElement(location)).openPopup();
+    });
+    marker.addTo(convenienceLayer);
+  }
+  if(updateStatus) setStatusKey("convenienceVisibleStatus", visible.length, candidates.length);
 }
 
 function majorStationZoomLimit(){
@@ -1239,6 +1644,21 @@ function renderBrandKey(){
   }
 }
 
+function renderConvenienceFilters(){
+  const convenienceFilters = document.getElementById("convenienceFilters");
+  convenienceFilters.innerHTML = "";
+  const counts = convenienceData && convenienceData.counts && convenienceData.counts.byBrand ? convenienceData.counts.byBrand : {};
+  for(const brand of convenienceFilterBrands()){
+    const meta = CONVENIENCE_META[brand];
+    const count = Number(counts[brand]);
+    const countLabel = Number.isFinite(count) && count > 0 ? ` (${count})` : "";
+    convenienceFilters.appendChild(checkboxChip(`${meta.short}${countLabel}`, state.convenienceBrands.has(brand), checked=>{
+      checked ? state.convenienceBrands.add(brand) : state.convenienceBrands.delete(brand);
+      renderConvenienceStores(true);
+    }, meta.className));
+  }
+}
+
 function renderFilters(){
   const brandFilters = document.getElementById("brandFilters");
   brandFilters.innerHTML = "";
@@ -1257,6 +1677,7 @@ function renderFilters(){
     areaFilters.appendChild(checkboxChip(`${AREA_LABELS[state.lang][area] || area} (${count})`, state.areas.has(area), checked=>{
       checked ? state.areas.add(area) : state.areas.delete(area);
       renderMarkers();
+      renderConvenienceStores(true);
     }));
   }
   const cueFilters = document.getElementById("cueFilters");
@@ -1266,6 +1687,19 @@ function renderFilters(){
     localStorage.setItem("runPlannerMajorStations", checked ? "1" : "0");
     renderMajorStations();
   }, "station-dot"));
+  cueFilters.appendChild(checkboxChip(bathroomCueLabel(), state.showBathrooms, checked=>{
+    state.showBathrooms = checked;
+    localStorage.setItem(BATHROOM_STORAGE_KEY, checked ? "1" : "0");
+    if(checked){
+      bathroomFailedKey = "";
+    }else{
+      if(bathroomFetchTimer) window.clearTimeout(bathroomFetchTimer);
+      if(bathroomFetchController) bathroomFetchController.abort();
+      bathroomFetchTimer = null;
+    }
+    renderBathrooms();
+  }, "bathroom-dot"));
+  renderConvenienceFilters();
 }
 
 function loadCenter(){
@@ -1334,6 +1768,7 @@ function applyLanguage(){
   document.getElementById("brandsLabel").textContent = t("brandsLabel");
   document.getElementById("areasLabel").textContent = t("areasLabel");
   document.getElementById("mapCuesLabel").textContent = t("mapCuesLabel");
+  document.getElementById("convenienceLabel").textContent = t("convenienceLabel");
   document.getElementById("filterHint").textContent = t("filterHint");
   document.querySelector(".route-draw-controls").setAttribute("aria-label", t("routeDrawLabel"));
   renderRouteControls();
@@ -1342,6 +1777,8 @@ function applyLanguage(){
   }
   renderFilters();
   renderMajorStations();
+  renderConvenienceStores(false);
+  renderBathrooms(false);
   updateRoute(false);
 }
 
@@ -1355,10 +1792,13 @@ function setLanguage(lang){
 function init(){
   map = L.map("map", {zoomControl:true, minZoom:7, maxZoom:18}).setView([state.lat, state.lng], 10);
   L.tileLayer(GSI_TILE_URL, {minZoom:7, maxZoom:18, attribution:GSI_ATTRIBUTION}).addTo(map);
+  if(map.attributionControl) map.attributionControl.addAttribution(BATHROOM_ATTRIBUTION);
   const majorStationPane = map.createPane("majorStationPane");
   majorStationPane.style.zIndex = "680";
   majorStationPane.style.pointerEvents = "none";
   majorStationLayer = L.layerGroup().addTo(map);
+  bathroomLayer = L.layerGroup().addTo(map);
+  convenienceLayer = L.layerGroup().addTo(map);
   markerLayer = L.layerGroup().addTo(map);
   routeCircle = L.circle([state.lat, state.lng], {radius:state.radiusKm * 1000, color:"#1f8fff", weight:3, dashArray:"8 9", fillColor:"#22c55e", fillOpacity:.12}).addTo(map);
   centerMarker = L.marker([state.lat, state.lng], {draggable:true}).addTo(map);
@@ -1381,11 +1821,17 @@ function init(){
       showRouteMenu(event.latlng);
     }
   });
-  map.on("zoomend moveend", renderMajorStations);
+  map.on("zoomend moveend", ()=>{
+    renderMajorStations();
+    renderBathrooms();
+    renderConvenienceStores(state.convenienceBrands.size > 0);
+  });
   applyLanguage();
   updateDrawerShift();
   setDrawerOpen(true);
   renderMajorStations();
+  renderBathrooms();
+  renderConvenienceStores(false);
   renderMarkers(!restoredRoute);
   renderDrawnRoute();
   updateRoute(false);
