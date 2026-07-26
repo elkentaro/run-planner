@@ -35,6 +35,7 @@ Use:
 - Drag the center marker for finer placement.
 - Use the pencil button to draw a direct-line route. The starting point defaults
   to the current circle center, which is also the last map-click center.
+- The route draw row shows total drawn distance, starting at `0.00 km`.
 - Once the start is set, draw mode zooms to level 16 and locks zoom while
   editing the route. Each map click adds the next waypoint directly.
 - Click a visible `AF`, `WG`, `CR`, or `SB` marker while drawing to add that
