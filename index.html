@@ -1188,7 +1188,7 @@ function init(){
   markerLayer = L.layerGroup().addTo(map);
   routeCircle = L.circle([state.lat, state.lng], {radius:state.radiusKm * 1000, color:"#1f8fff", weight:3, dashArray:"8 9", fillColor:"#22c55e", fillOpacity:.12}).addTo(map);
   centerMarker = L.marker([state.lat, state.lng], {draggable:true}).addTo(map);
-  drawnRouteLine = L.polyline([], {color:"#ef5f4a", weight:5, opacity:.92, lineCap:"round", lineJoin:"round", bubblingMouseEvents:false});
+  drawnRouteLine = L.polyline([], {color:"#006dff", weight:5, opacity:.95, lineCap:"round", lineJoin:"round", bubblingMouseEvents:false});
   routePointLayer = L.layerGroup();
   const restoredRoute = loadSavedRoute();
   centerMarker.on("dragend", event=>{
