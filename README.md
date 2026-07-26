@@ -36,6 +36,8 @@ Use:
   to the current circle center, which is also the last map-click center.
 - Once the start is set, draw mode zooms to level 16 and locks zoom while
   editing the route. Each map click adds the next waypoint directly.
+- Click a visible `AF`, `WG`, `CR`, or `SB` marker while drawing to add that
+  location as the next waypoint, with an option to set it as the route goal.
 - Click an existing route segment to add a draggable control point between the
   surrounding waypoints. This reopens edit mode if the route was locked.
 - Normal endpoint clicks show a compact distance popup. Right-click the route or

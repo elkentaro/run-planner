@@ -279,11 +279,14 @@ const I18N = {
     routeAddPrompt:"Click the map to add waypoints.",
     routeStartSet:"Starting point set",
     routeWaypointAdded:"Waypoint added",
+    routeLocationWaypointAdded:"Location added as waypoint",
     routeControlPointAdded:"Control point added",
     routeControlPointMoved:"Control point moved",
     routeUndoDone:"Waypoint removed",
     routeNeedWaypoint:"Add at least one waypoint before Done.",
     routeDone:"Route locked",
+    setRouteGoal:"Set route goal",
+    routeGoalSet:"Route goal set",
     routeCleared:"Route cleared",
     routeDrawOff:"Route drawing off",
     routeRestored:"Saved route restored",
@@ -347,11 +350,14 @@ const I18N = {
     routeAddPrompt:"地図をクリックして経由点を追加します。",
     routeStartSet:"開始地点を設定しました",
     routeWaypointAdded:"経由点を追加しました",
+    routeLocationWaypointAdded:"店舗を経由点に追加しました",
     routeControlPointAdded:"コントロールポイントを追加しました",
     routeControlPointMoved:"コントロールポイントを移動しました",
     routeUndoDone:"経由点を戻しました",
     routeNeedWaypoint:"完了する前に経由点を1つ以上追加してください。",
     routeDone:"ルートを固定しました",
+    setRouteGoal:"ゴールに設定",
+    routeGoalSet:"ルートゴールを設定しました",
     routeCleared:"ルートを消去しました",
     routeDrawOff:"ルート作成を終了しました",
     routeRestored:"保存済みルートを復元しました",
@@ -456,6 +462,10 @@ function pointFromLatLng(latlng){
 
 function latLngFromPoint(point){
   return L.latLng(point.lat, point.lng);
+}
+
+function sameRoutePoint(left, right){
+  return Boolean(left && right && Math.abs(Number(left.lat) - Number(right.lat)) < 0.0000001 && Math.abs(Number(left.lng) - Number(right.lng)) < 0.0000001);
 }
 
 function routeDistanceKm(){
@@ -786,6 +796,32 @@ function showRouteMenu(latlng){
     .openOn(map);
 }
 
+function routeLocationGoalElement(location){
+  const wrap = document.createElement("div");
+  wrap.className = "popup route-popup";
+  L.DomEvent.disableClickPropagation(wrap);
+  const title = document.createElement("b");
+  title.textContent = location.name || location.brand;
+  wrap.appendChild(title);
+  const detail = document.createElement("p");
+  detail.textContent = `${t("routeDistanceStat")}: ${routeDistanceLabel(routeDistanceKm())}`;
+  wrap.appendChild(detail);
+  const actions = document.createElement("div");
+  actions.className = "route-popup-actions";
+  actions.appendChild(popupButton(t("setRouteGoal"), "primary", state.routePoints.length < 2, () => completeRoute("routeGoalSet")));
+  wrap.appendChild(actions);
+  return wrap;
+}
+
+function showRouteLocationGoalPopup(location, latlng){
+  if(!map) return;
+  if(routeDistancePopupTimer) window.clearTimeout(routeDistancePopupTimer);
+  L.popup({closeButton:true, autoClose:true})
+    .setLatLng(latlng)
+    .setContent(routeLocationGoalElement(location))
+    .openOn(map);
+}
+
 function showDistancePopup(latlng){
   if(!map) return;
   if(routeDistancePopupTimer) window.clearTimeout(routeDistancePopupTimer);
@@ -891,11 +927,26 @@ function setRouteStart(latlng, showPopup=true){
   if(showPopup) showDistancePopup(latLngFromPoint(state.routePoints[0]));
 }
 
-function addRouteWaypoint(latlng){
-  state.routePoints.push(pointFromLatLng(latlng));
+function addRouteWaypoint(latlng, options={}){
+  const point = pointFromLatLng(latlng);
+  const lastPoint = state.routePoints[state.routePoints.length - 1];
+  if(!sameRoutePoint(lastPoint, point)){
+    state.routePoints.push(point);
+  }
   renderDrawnRoute();
-  setStatusKey("routeWaypointAdded");
-  showDistancePopup(latlng);
+  setStatusKey(options.statusKey || "routeWaypointAdded");
+  if(options.showDistance !== false) showDistancePopup(latlng);
+}
+
+function addLocationWaypoint(location){
+  if(state.routeMode !== "drawing") return false;
+  const latlng = L.latLng(location.lat, location.lng);
+  if(!state.routePoints.length){
+    setRouteStart(defaultRouteStartLatLng(), false);
+  }
+  addRouteWaypoint(latlng, {statusKey:"routeLocationWaypointAdded", showDistance:false});
+  showRouteLocationGoalPopup(location, latlng);
+  return true;
 }
 
 function insertRouteControlPoint(latlng){
@@ -929,7 +980,7 @@ function startOverRoute(){
   setRouteStart(defaultRouteStartLatLng(), false);
 }
 
-function completeRoute(){
+function completeRoute(statusKey="routeDone"){
   if(state.routePoints.length < 2){
     setStatusKey("routeNeedWaypoint");
     return;
@@ -939,7 +990,7 @@ function completeRoute(){
   map.closePopup();
   saveDrawnRoute();
   renderDrawnRoute();
-  setStatusKey("routeDone");
+  setStatusKey(statusKey);
 }
 
 function handleRouteMapClick(event){
@@ -1031,9 +1082,15 @@ function renderMarkers(updateStatus=true){
   const items = visibleLocations();
   markerLayer.clearLayers();
   for(const location of items){
-    L.marker([location.lat, location.lng], {icon:markerIcon(location), title:location.name})
-      .bindPopup(popupElement(location))
-      .addTo(markerLayer);
+    const marker = L.marker([location.lat, location.lng], {icon:markerIcon(location), title:location.name});
+    marker.on("click", event=>{
+      if(addLocationWaypoint(location)){
+        if(event.originalEvent) L.DomEvent.stop(event.originalEvent);
+        return;
+      }
+      marker.bindPopup(popupElement(location)).openPopup();
+    });
+    marker.addTo(markerLayer);
   }
   for(const location of RUNNER_LOCATIONS){
     L.marker([location.lat, location.lng], {icon:runnerIcon(), title:location.name})
