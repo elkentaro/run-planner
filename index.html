@@ -840,8 +840,16 @@ function unlockDrawZoom(){
   state.drawZoomRestore = null;
 }
 
+function defaultRouteStartLatLng(){
+  return L.latLng(state.lat, state.lng);
+}
+
 function beginRouteDraw(focusLatLng){
   state.routeMode = "drawing";
+  if(!state.routePoints.length){
+    setRouteStart(defaultRouteStartLatLng(), false);
+    return;
+  }
   if(state.routePoints.length){
     lockDrawZoom(focusLatLng);
   }
@@ -874,13 +882,13 @@ function toggleRouteDraw(){
   beginRouteDraw();
 }
 
-function setRouteStart(latlng){
+function setRouteStart(latlng, showPopup=true){
   state.routePoints = [pointFromLatLng(latlng)];
   state.routeMode = "drawing";
   lockDrawZoom(latlng);
   renderDrawnRoute();
-  setStatusKey("routeStartSet");
-  showDistancePopup(latLngFromPoint(state.routePoints[0]));
+  setStatusKey(showPopup ? "routeStartSet" : "routeAddPrompt");
+  if(showPopup) showDistancePopup(latLngFromPoint(state.routePoints[0]));
 }
 
 function addRouteWaypoint(latlng){
@@ -918,8 +926,7 @@ function startOverRoute(){
   state.routeMode = "drawing";
   unlockDrawZoom();
   map.closePopup();
-  renderDrawnRoute();
-  setStatusKey("routeStartPrompt");
+  setRouteStart(defaultRouteStartLatLng(), false);
 }
 
 function completeRoute(){

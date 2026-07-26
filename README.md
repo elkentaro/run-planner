@@ -32,11 +32,10 @@ Use:
 - Click the map to place the route center.
 - Change `Radius km` to redraw the distance radius.
 - Drag the center marker for finer placement.
-- Use the pencil button to draw a direct-line route. Zoom remains free until the
-  starting point is set, then draw mode zooms to level 16 and locks zoom while
-  editing the route.
-- The first draw-mode map click opens a `Set starting point` popup. After the
-  start is set, each map click adds the next waypoint directly.
+- Use the pencil button to draw a direct-line route. The starting point defaults
+  to the current circle center, which is also the last map-click center.
+- Once the start is set, draw mode zooms to level 16 and locks zoom while
+  editing the route. Each map click adds the next waypoint directly.
 - Click an existing route segment to add a draggable control point between the
   surrounding waypoints. This reopens edit mode if the route was locked.
 - Normal endpoint clicks show a compact distance popup. Right-click the route or
