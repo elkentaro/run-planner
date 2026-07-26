@@ -79,7 +79,7 @@
   .brand-sb{background:#006241;}
   .station-dot{background:#111;border-color:#111;}
   .major-station-icon{background:transparent;border:0;pointer-events:none;}
-  .major-station-label{display:inline-block;max-width:116px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;border-radius:3px;background:rgba(10,10,10,.88);color:#fff;padding:2px 5px;font-size:11px;font-weight:400;line-height:1.15;box-shadow:0 1px 5px rgba(0,0,0,.24);pointer-events:none;}
+  .major-station-label{display:inline-block;max-width:145px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;border-radius:4px;background:rgba(10,10,10,.88);color:#fff;padding:3px 7px;font-size:14px;font-weight:400;line-height:1.2;box-shadow:0 2px 7px rgba(0,0,0,.24);pointer-events:none;}
   .popup{min-width:210px;max-width:280px;border-radius:18px;}
   .popup b{display:block;font-size:14px;margin-bottom:4px;}
   .popup p{font-size:12px;margin:0 0 6px;color:#333;}
@@ -1104,7 +1104,7 @@ function majorStationIcon(station){
     className:"major-station-icon",
     html:`<span class="major-station-label">${escapeHtml(stationDisplayName(station))}</span>`,
     iconSize:[1,1],
-    iconAnchor:[0,10]
+    iconAnchor:[0,13]
   });
 }
 
@@ -1139,7 +1139,8 @@ function renderMajorStations(){
       icon:majorStationIcon(station),
       interactive:false,
       keyboard:false,
-      zIndexOffset:-500
+      pane:"majorStationPane",
+      zIndexOffset:1000
     }).addTo(majorStationLayer);
   }
 }
@@ -1324,6 +1325,9 @@ function setLanguage(lang){
 function init(){
   map = L.map("map", {zoomControl:true, minZoom:7, maxZoom:18}).setView([state.lat, state.lng], 10);
   L.tileLayer(GSI_TILE_URL, {minZoom:7, maxZoom:18, attribution:GSI_ATTRIBUTION}).addTo(map);
+  const majorStationPane = map.createPane("majorStationPane");
+  majorStationPane.style.zIndex = "680";
+  majorStationPane.style.pointerEvents = "none";
   majorStationLayer = L.layerGroup().addTo(map);
   markerLayer = L.layerGroup().addTo(map);
   routeCircle = L.circle([state.lat, state.lng], {radius:state.radiusKm * 1000, color:"#1f8fff", weight:3, dashArray:"8 9", fillColor:"#22c55e", fillOpacity:.12}).addTo(map);
