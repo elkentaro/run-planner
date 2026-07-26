@@ -31,7 +31,7 @@ Use:
 
 - Use the `<` / `>` side tab to open or close the planner panel.
 - Click the map to place the route center.
-- Change `Radius km` to redraw the distance radius.
+- Use the `Radius km` dropdown to choose a whole-kilometer radius from 1 to 43.
 - Drag the center marker for finer placement.
 - Use the pencil button to draw a direct-line route. The starting point defaults
   to the current circle center, which is also the last map-click center.
@@ -43,8 +43,8 @@ Use:
   surrounding waypoints. This reopens edit mode if the route was locked.
 - Normal endpoint clicks show a compact distance popup. Right-click the route or
   map while drawing to open the full route action menu.
-- Drawn routes replace the radius display and show total route distance plus
-  pace-based route time in the stats.
+- Drawn routes replace the radius estimate with total route distance plus
+  pace-based estimated time beside the radius and pace controls.
 - Use `Undo` to remove waypoints back to the starting point, `Done` to lock and
   save the route, and `Start over` to clear it and begin again.
 - Use `Export GPX` after selecting `Done` to download the locked route as a GPX
