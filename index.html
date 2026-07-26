@@ -77,6 +77,9 @@
   .brand-wg{background:#006323;}
   .brand-cr{background:#d97706;}
   .brand-sb{background:#006241;}
+  .station-dot{background:#111;border-color:#111;}
+  .major-station-icon{background:transparent;border:0;pointer-events:none;}
+  .major-station-label{display:inline-block;max-width:116px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;border-radius:3px;background:rgba(10,10,10,.88);color:#fff;padding:2px 5px;font-size:11px;font-weight:400;line-height:1.15;box-shadow:0 1px 5px rgba(0,0,0,.24);pointer-events:none;}
   .popup{min-width:210px;max-width:280px;border-radius:18px;}
   .popup b{display:block;font-size:14px;margin-bottom:4px;}
   .popup p{font-size:12px;margin:0 0 6px;color:#333;}
@@ -175,6 +178,10 @@
           <label id="areasLabel">Areas</label>
           <div class="chips" id="areaFilters"></div>
         </div>
+        <div class="control">
+          <label id="mapCuesLabel">Map cues</label>
+          <div class="chips" id="cueFilters"></div>
+        </div>
         <div class="filter-hint" id="filterHint">Click selected filters to unselect.</div>
       </div>
       <div class="pane-block results-panel">
@@ -193,9 +200,11 @@
 </div>
 
 <script src="./locations.js"></script>
+<script src="./major-stations.js"></script>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
 const DATA = window.RUN_PLANNER_DATA || {locations:[], areas:[], counts:{byBrand:{}, byArea:{}}};
+const MAJOR_STATIONS = window.RUN_PLANNER_MAJOR_STATIONS || [];
 const DEFAULT_CENTER = {lat:35.562641,lng:139.687246};
 const GSI_TILE_URL = "https://cyberjapandata.gsi.go.jp/xyz/std/{z}/{x}/{y}.png";
 const GSI_ATTRIBUTION = '<a href="https://maps.gsi.go.jp/development/ichiran.html">地理院タイル</a>';
@@ -241,6 +250,8 @@ const I18N = {
     hidePanel:"Close planner",
     brandsLabel:"Brands",
     areasLabel:"Areas",
+    mapCuesLabel:"Map cues",
+    majorStations:"Major stations",
     filterHint:"Click selected filters to unselect.",
     storesStat:"Stores",
     radiusStat:"Radius",
@@ -312,6 +323,8 @@ const I18N = {
     hidePanel:"プランナーを閉じる",
     brandsLabel:"ブランド",
     areasLabel:"エリア",
+    mapCuesLabel:"地図目印",
+    majorStations:"主要駅",
     filterHint:"選択中の項目をクリックすると解除できます。",
     storesStat:"店舗",
     radiusStat:"半径",
@@ -371,6 +384,7 @@ const state = {
   radiusKm:2,
   brands:new Set(Object.keys(BRAND_META)),
   areas:new Set(DATA.areas || []),
+  showMajorStations:localStorage.getItem("runPlannerMajorStations") !== "0",
   lang:localStorage.getItem("runPlannerLang") === "ja" ? "ja" : "en",
   routeMode:"empty",
   routePoints:[],
@@ -378,7 +392,7 @@ const state = {
   lastStatusKey:"clickPrompt",
   lastStatusArgs:[]
 };
-let map, centerMarker, routeCircle, markerLayer, drawnRouteLine, routePointLayer, routeDistancePopupTimer;
+let map, centerMarker, routeCircle, markerLayer, majorStationLayer, drawnRouteLine, routePointLayer, routeDistancePopupTimer;
 
 const locationInput = document.getElementById("locationInput");
 const radiusInput = document.getElementById("radiusInput");
@@ -426,6 +440,16 @@ function formatDate(value){
 function formatKm(value){
   const number = Number(value) || 0;
   return `${number.toFixed(number % 1 ? 1 : 0)} km`;
+}
+
+function escapeHtml(value){
+  return String(value).replace(/[<>&'"]/g, character=>({
+    "<":"&lt;",
+    ">":"&gt;",
+    "&":"&amp;",
+    "'":"&#39;",
+    '"':"&quot;"
+  }[character]));
 }
 
 function parsePaceMinutes(value){
@@ -1070,12 +1094,54 @@ function runnerIcon(){
   });
 }
 
+function stationDisplayName(station){
+  if(state.lang === "ja") return station.nameJa || station.name;
+  return station.nameEn || station.name;
+}
+
+function majorStationIcon(station){
+  return L.divIcon({
+    className:"major-station-icon",
+    html:`<span class="major-station-label">${escapeHtml(stationDisplayName(station))}</span>`,
+    iconSize:[1,1],
+    iconAnchor:[0,10]
+  });
+}
+
 function visibleLocations(){
   return (DATA.locations || []).filter(location=>{
     if(!state.brands.has(location.brand)) return false;
     if(!state.areas.has(location.area)) return false;
     return true;
   });
+}
+
+function majorStationZoomLimit(){
+  const zoom = map ? map.getZoom() : 10;
+  if(zoom >= 14) return MAJOR_STATIONS.length;
+  if(zoom >= 12) return 70;
+  if(zoom >= 11) return 36;
+  return 18;
+}
+
+function visibleMajorStations(){
+  if(!state.showMajorStations || !map) return [];
+  const bounds = map.getBounds().pad(0.2);
+  const limit = majorStationZoomLimit();
+  return MAJOR_STATIONS.filter(station=>bounds.contains([station.lat, station.lng])).slice(0, limit);
+}
+
+function renderMajorStations(){
+  if(!majorStationLayer) return;
+  majorStationLayer.clearLayers();
+  for(const station of visibleMajorStations()){
+    L.marker([station.lat, station.lng], {
+      icon:majorStationIcon(station),
+      interactive:false,
+      keyboard:false,
+      zIndexOffset:-500
+    }).addTo(majorStationLayer);
+  }
 }
 
 function renderMarkers(updateStatus=true){
@@ -1161,6 +1227,13 @@ function renderFilters(){
       renderMarkers();
     }));
   }
+  const cueFilters = document.getElementById("cueFilters");
+  cueFilters.innerHTML = "";
+  cueFilters.appendChild(checkboxChip(`${t("majorStations")} (${MAJOR_STATIONS.length})`, state.showMajorStations, checked=>{
+    state.showMajorStations = checked;
+    localStorage.setItem("runPlannerMajorStations", checked ? "1" : "0");
+    renderMajorStations();
+  }, "station-dot"));
 }
 
 function loadCenter(){
@@ -1228,6 +1301,7 @@ function applyLanguage(){
   drawerToggleText.textContent = drawer.classList.contains("closed") ? ">" : "<";
   document.getElementById("brandsLabel").textContent = t("brandsLabel");
   document.getElementById("areasLabel").textContent = t("areasLabel");
+  document.getElementById("mapCuesLabel").textContent = t("mapCuesLabel");
   document.getElementById("filterHint").textContent = t("filterHint");
   document.getElementById("storesStatLabel").textContent = t("storesStat");
   document.querySelector(".route-draw-controls").setAttribute("aria-label", t("routeDrawLabel"));
@@ -1236,6 +1310,7 @@ function applyLanguage(){
     statusEl.textContent = t(state.lastStatusKey, ...state.lastStatusArgs);
   }
   renderFilters();
+  renderMajorStations();
   updateRoute(false);
 }
 
@@ -1249,6 +1324,7 @@ function setLanguage(lang){
 function init(){
   map = L.map("map", {zoomControl:true, minZoom:7, maxZoom:18}).setView([state.lat, state.lng], 10);
   L.tileLayer(GSI_TILE_URL, {minZoom:7, maxZoom:18, attribution:GSI_ATTRIBUTION}).addTo(map);
+  majorStationLayer = L.layerGroup().addTo(map);
   markerLayer = L.layerGroup().addTo(map);
   routeCircle = L.circle([state.lat, state.lng], {radius:state.radiusKm * 1000, color:"#1f8fff", weight:3, dashArray:"8 9", fillColor:"#22c55e", fillOpacity:.12}).addTo(map);
   centerMarker = L.marker([state.lat, state.lng], {draggable:true}).addTo(map);
@@ -1271,9 +1347,11 @@ function init(){
       showRouteMenu(event.latlng);
     }
   });
+  map.on("zoomend moveend", renderMajorStations);
   applyLanguage();
   updateDrawerShift();
   setDrawerOpen(true);
+  renderMajorStations();
   renderMarkers(!restoredRoute);
   renderDrawnRoute();
   updateRoute(false);

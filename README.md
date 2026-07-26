@@ -6,6 +6,7 @@ Files:
 
 - `index.html` - the standalone map UI
 - `locations.js` - generated store overlay data
+- `major-stations.js` - generated major-station visual cue data
 
 Rebuild the store data:
 
@@ -50,5 +51,6 @@ Use:
   track. Exported geometry uses the same direct-line points shown on the map.
 - Use brand and area filters to reduce visible store markers.
 - Use the brand key to read marker abbreviations: `AF`, `WG`, `CR` for CRISP SALAD WORKS, and `SB` for Starbucks.
+- Toggle `Major stations` to show or hide small black landmark labels for roughly 100 high-traffic stations in the supported areas.
 - The runner emoji marker is a standalone running shop marker and is not part of the brand key.
 - Use the `EN` / `日本語` switch to change the UI language.
