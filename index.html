@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<meta name="run-planner-version" content="2026.07.28.2">
+<meta name="run-planner-version" content="2026.07.28.3">
 <title>Run Planner Map</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <script data-goatcounter="https://runplanhacker.goatcounter.com/count"
@@ -229,7 +229,7 @@ const TARGET_AREAS = ["東京都", "神奈川県", "埼玉県", "千葉県", "�
 const DATA = {locations:[], areas:TARGET_AREAS, counts:{total:0, byBrand:{}, byArea:{}}};
 let MAJOR_STATIONS = [];
 let RUNNER_LOCATIONS = [];
-const APP_VERSION = "2026.07.28.2";
+const APP_VERSION = "2026.07.28.3";
 const DEFAULT_CENTER = {lat:35.685175,lng:139.752800};
 const GSI_TILE_URL = "https://cyberjapandata.gsi.go.jp/xyz/std/{z}/{x}/{y}.png";
 const GSI_ATTRIBUTION = '<a href="https://maps.gsi.go.jp/development/ichiran.html">地理院タイル</a>';
@@ -299,6 +299,7 @@ const I18N = {
     cyclePortLoading:"loading",
     cyclePortLoadFailed:"failed",
     cyclePortZoomPrompt:zoom=>`zoom ${zoom}+`,
+    cyclePortZoomStatus:zoom=>`Zoom to level ${zoom} or closer to show Docomo cycle ports.`,
     cyclePortLoadingStatus:"Loading Docomo cycle ports",
     cyclePortLoadFailedStatus:"Could not load Docomo cycle ports",
     cyclePortVisibleStatus:(visible,total)=>`${visible} cycle ports visible / ${total} total`,
@@ -400,6 +401,7 @@ const I18N = {
     cyclePortLoading:"読込中",
     cyclePortLoadFailed:"失敗",
     cyclePortZoomPrompt:zoom=>`ズーム${zoom}+`,
+    cyclePortZoomStatus:zoom=>`ズーム${zoom}以上でドコモ・バイクシェアのポートを表示します。`,
     cyclePortLoadingStatus:"ドコモ・バイクシェアのポートを読み込み中",
     cyclePortLoadFailedStatus:"ドコモ・バイクシェアのポートを読み込めませんでした",
     cyclePortVisibleStatus:(visible,total)=>`${visible}件のポートを表示 / 全${total}件`,
@@ -1704,6 +1706,7 @@ function renderCyclePorts(updateFilters=true){
     state.cyclePortCount = 0;
     state.cyclePortStatus = "zoom";
     if(updateFilters) renderFilters();
+    if(updateFilters) setStatusKey("cyclePortZoomStatus", CYCLE_PORT_MIN_ZOOM);
     return;
   }
   if(!cyclePortData){
