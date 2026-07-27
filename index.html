@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<meta name="run-planner-version" content="2026.07.28.3">
+<meta name="run-planner-version" content="2026.07.28.4">
 <title>Run Planner Map</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <script data-goatcounter="https://runplanhacker.goatcounter.com/count"
@@ -120,9 +120,13 @@
   .route-visual-overlay{position:absolute;inset:0;z-index:450;width:100%;height:100%;overflow:hidden;pointer-events:none;}
   .route-visual-line{fill:none;stroke:#006dff;stroke-width:5;stroke-linecap:round;stroke-linejoin:round;vector-effect:non-scaling-stroke;}
   .route-hit-target{pointer-events:stroke;}
-  .bearing-reset-control{display:flex;align-items:center;justify-content:center;width:34px;height:34px;border:0;background:#fff;color:#17211b;font-size:12px;font-weight:900;line-height:1;cursor:pointer;}
-  .bearing-reset-control.active{background:#17211b;color:#fff;}
-  .bearing-reset-control span{display:block;transform:rotate(0deg);transition:transform .12s ease;}
+  .bearing-reset-control{display:flex;align-items:center;justify-content:center;width:36px;height:36px;border:0;background:#fff;color:#111;font-weight:900;line-height:1;cursor:pointer;}
+  .bearing-reset-control.active{background:#fff;color:#111;box-shadow:inset 0 0 0 2px rgba(230,36,36,.18);}
+  .bearing-reset-icon{display:flex;flex-direction:column;align-items:center;justify-content:center;width:26px;height:28px;transform:rotate(0deg);transition:transform .12s ease;}
+  .bearing-reset-arrow{color:#e62424;font-size:16px;font-weight:900;line-height:.7;}
+  .bearing-reset-letter{color:#111;font-size:12px;font-weight:900;line-height:1;}
+  .site-qr-control{display:block;width:80px;height:80px;padding:5px;border:1px solid rgba(23,33,27,.24);border-radius:4px;background:#fff;box-shadow:0 3px 12px rgba(0,0,0,.2);line-height:0;}
+  .site-qr-control img{display:block;width:100%;height:100%;}
   html[lang="ja"] .btn.primary,html[lang="ja"] .btn.accent,html[lang="ja"] .chip.active,html[lang="ja"] .lang-switch button.active{font-weight:700;text-shadow:0 1px 2px rgba(0,0,0,.24);}
   html[lang="ja"] .btn,html[lang="ja"] .chip{font-weight:700;}
   @media(max-width:700px){
@@ -141,6 +145,7 @@
     .run-settings{grid-template-columns:minmax(0,1fr) minmax(0,1fr) minmax(96px,.95fr);gap:6px;}
     .run-settings input,.run-settings select,.estimate-box,.estimate-value{font-size:14px;}
     .estimate-box{padding:8px;}
+    .site-qr-control{width:44px;height:44px;padding:3px;}
   }
 </style>
 </head>
@@ -229,10 +234,12 @@ const TARGET_AREAS = ["東京都", "神奈川県", "埼玉県", "千葉県", "�
 const DATA = {locations:[], areas:TARGET_AREAS, counts:{total:0, byBrand:{}, byArea:{}}};
 let MAJOR_STATIONS = [];
 let RUNNER_LOCATIONS = [];
-const APP_VERSION = "2026.07.28.3";
+const APP_VERSION = "2026.07.28.4";
 const DEFAULT_CENTER = {lat:35.685175,lng:139.752800};
 const GSI_TILE_URL = "https://cyberjapandata.gsi.go.jp/xyz/std/{z}/{x}/{y}.png";
 const GSI_ATTRIBUTION = '<a href="https://maps.gsi.go.jp/development/ichiran.html">地理院タイル</a>';
+const LIVE_SITE_URL = "https://elkentaro.github.io/run-planner/";
+const SITE_QR_IMAGE_URL = "./assets/run-planner-qr.svg";
 const DRAW_ZOOM = 16;
 const ROUTE_STORAGE_KEY = "runPlannerDrawnRoute";
 const GPX_MIME_TYPE = "application/gpx+xml";
@@ -368,7 +375,8 @@ const I18N = {
     routeRestored:"Saved route restored",
     gpxExported:"GPX exported",
     gpxUnavailable:"Select Done before exporting GPX.",
-    resetBearing:"Reset map north"
+    resetBearing:"Reset map north",
+    openSiteQr:"Open Run Planner"
   },
   ja: {
     docTitle:"ランニングプランナーマップ",
@@ -470,7 +478,8 @@ const I18N = {
     routeRestored:"保存済みルートを復元しました",
     gpxExported:"GPXを出力しました",
     gpxUnavailable:"GPX出力の前に完了を選択してください。",
-    resetBearing:"地図を北向きに戻す"
+    resetBearing:"地図を北向きに戻す",
+    openSiteQr:"ランニングプランナーを開く"
   }
 };
 const state = {
@@ -502,7 +511,7 @@ let bathroomLoadPromise = null;
 let cyclePortData = null;
 let cyclePortLoadPromise = null;
 let majorStationStatus = "loading";
-let map, centerMarker, routeCircle, markerLayer, convenienceLayer, bathroomLayer, cyclePortLayer, majorStationLayer, drawnRouteLine, routePointLayer, routeDistancePopupTimer, routeVisualOverlay, routeVisualPath, routeVisualFrame, bearingResetControl, bearingResetButton;
+let map, centerMarker, routeCircle, markerLayer, convenienceLayer, bathroomLayer, cyclePortLayer, majorStationLayer, drawnRouteLine, routePointLayer, routeDistancePopupTimer, routeVisualOverlay, routeVisualPath, routeVisualFrame, bearingResetControl, bearingResetButton, siteQrControl, siteQrLink;
 
 const locationInput = document.getElementById("locationInput");
 const radiusInput = document.getElementById("radiusInput");
@@ -771,7 +780,7 @@ function updateBearingResetControl(){
   bearingResetButton.classList.toggle("active", active);
   bearingResetButton.title = t("resetBearing");
   bearingResetButton.setAttribute("aria-label", t("resetBearing"));
-  const arrow = bearingResetButton.querySelector("span");
+  const arrow = bearingResetButton.querySelector(".bearing-reset-icon");
   if(arrow) arrow.style.transform = `rotate(${-bearing}deg)`;
 }
 
@@ -788,7 +797,7 @@ function addBearingResetControl(){
     onAdd(){
       const button = L.DomUtil.create("button", "leaflet-bar bearing-reset-control");
       button.type = "button";
-      button.innerHTML = "<span>N</span>";
+      button.innerHTML = '<span class="bearing-reset-icon" aria-hidden="true"><span class="bearing-reset-arrow">↑</span><span class="bearing-reset-letter">N</span></span>';
       L.DomEvent.disableClickPropagation(button);
       L.DomEvent.on(button, "click", event=>{
         L.DomEvent.stop(event);
@@ -802,6 +811,35 @@ function addBearingResetControl(){
   bearingResetControl = new BearingResetControl();
   bearingResetControl.addTo(map);
   map.on("rotate", updateBearingResetControl);
+}
+
+function updateSiteQrControl(){
+  if(!siteQrLink) return;
+  siteQrLink.title = t("openSiteQr");
+  siteQrLink.setAttribute("aria-label", t("openSiteQr"));
+}
+
+function addSiteQrControl(){
+  if(siteQrControl) return;
+  const SiteQrControl = L.Control.extend({
+    options:{position:"bottomright"},
+    onAdd(){
+      const link = L.DomUtil.create("a", "leaflet-control site-qr-control");
+      link.href = LIVE_SITE_URL;
+      link.target = "_blank";
+      link.rel = "noopener";
+      const image = document.createElement("img");
+      image.src = `${SITE_QR_IMAGE_URL}?v=${encodeURIComponent(APP_VERSION)}`;
+      image.alt = "";
+      link.appendChild(image);
+      L.DomEvent.disableClickPropagation(link);
+      siteQrLink = link;
+      updateSiteQrControl();
+      return link;
+    }
+  });
+  siteQrControl = new SiteQrControl();
+  siteQrControl.addTo(map);
 }
 
 function renderRouteVisual(){
@@ -2154,6 +2192,7 @@ function applyLanguage(){
   document.getElementById("mapElementsHint").textContent = `(${t("filterHint")})`;
   document.getElementById("areasLabel").textContent = t("areasLabel");
   updateBearingResetControl();
+  updateSiteQrControl();
   document.querySelector(".route-draw-controls").setAttribute("aria-label", t("routeDrawLabel"));
   document.getElementById("routeDrawFootnote").textContent = t("routeDrawFootnote");
   renderRouteControls();
@@ -2188,6 +2227,7 @@ function init(){
   L.tileLayer(GSI_TILE_URL, {minZoom:7, maxZoom:18, attribution:GSI_ATTRIBUTION}).addTo(map);
   addRouteVisualOverlay();
   addBearingResetControl();
+  addSiteQrControl();
   if(map.attributionControl) map.attributionControl.addAttribution(BATHROOM_ATTRIBUTION);
   if(map.attributionControl) map.attributionControl.addAttribution(CYCLE_PORT_ATTRIBUTION);
   const majorStationPane = map.createPane("majorStationPane");
