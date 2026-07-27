@@ -114,6 +114,12 @@
   .route-control-point.end{background:#ef5f4a;}
   .leaflet-marker-draggable .route-control-point{cursor:grab;}
   .leaflet-drag-target .route-control-point{cursor:grabbing;}
+  .route-visual-overlay{position:absolute;inset:0;z-index:450;width:100%;height:100%;overflow:hidden;pointer-events:none;}
+  .route-visual-line{fill:none;stroke:#006dff;stroke-width:5;stroke-linecap:round;stroke-linejoin:round;vector-effect:non-scaling-stroke;}
+  .route-hit-target{pointer-events:stroke;}
+  .bearing-reset-control{display:flex;align-items:center;justify-content:center;width:34px;height:34px;border:0;background:#fff;color:#17211b;font-size:12px;font-weight:900;line-height:1;cursor:pointer;}
+  .bearing-reset-control.active{background:#17211b;color:#fff;}
+  .bearing-reset-control span{display:block;transform:rotate(0deg);transition:transform .12s ease;}
   html[lang="ja"] .btn.primary,html[lang="ja"] .btn.accent,html[lang="ja"] .chip.active,html[lang="ja"] .lang-switch button.active{font-weight:700;text-shadow:0 1px 2px rgba(0,0,0,.24);}
   html[lang="ja"] .btn,html[lang="ja"] .chip{font-weight:700;}
   @media(max-width:700px){
@@ -216,10 +222,11 @@
 <script src="./locations.js"></script>
 <script src="./major-stations.js"></script>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/leaflet-rotate@0.2.8/dist/leaflet-rotate.js"></script>
 <script>
 const DATA = window.RUN_PLANNER_DATA || {locations:[], areas:[], counts:{byBrand:{}, byArea:{}}};
 const MAJOR_STATIONS = window.RUN_PLANNER_MAJOR_STATIONS || [];
-const APP_VERSION = "2026.07.26.2";
+const APP_VERSION = "2026.07.27.1";
 const DEFAULT_CENTER = {lat:35.685175,lng:139.752800};
 const GSI_TILE_URL = "https://cyberjapandata.gsi.go.jp/xyz/std/{z}/{x}/{y}.png";
 const GSI_ATTRIBUTION = '<a href="https://maps.gsi.go.jp/development/ichiran.html">地理院タイル</a>';
@@ -355,7 +362,8 @@ const I18N = {
     routeDrawOff:"Route drawing off",
     routeRestored:"Saved route restored",
     gpxExported:"GPX exported",
-    gpxUnavailable:"Select Done before exporting GPX."
+    gpxUnavailable:"Select Done before exporting GPX.",
+    resetBearing:"Reset map north"
   },
   ja: {
     docTitle:"ランニングプランナーマップ",
@@ -447,7 +455,8 @@ const I18N = {
     routeDrawOff:"ルート作成を終了しました",
     routeRestored:"保存済みルートを復元しました",
     gpxExported:"GPXを出力しました",
-    gpxUnavailable:"GPX出力の前に完了を選択してください。"
+    gpxUnavailable:"GPX出力の前に完了を選択してください。",
+    resetBearing:"地図を北向きに戻す"
   }
 };
 const state = {
@@ -479,7 +488,7 @@ let bathroomFailedKey = "";
 let bathroomCacheLoaded = false;
 let bathroomCacheEntries = [];
 const bathroomById = new Map();
-let map, centerMarker, routeCircle, markerLayer, convenienceLayer, bathroomLayer, majorStationLayer, drawnRouteLine, routePointLayer, routeDistancePopupTimer;
+let map, centerMarker, routeCircle, markerLayer, convenienceLayer, bathroomLayer, majorStationLayer, drawnRouteLine, routePointLayer, routeDistancePopupTimer, routeVisualOverlay, routeVisualPath, routeVisualFrame, bearingResetControl, bearingResetButton;
 
 const locationInput = document.getElementById("locationInput");
 const radiusInput = document.getElementById("radiusInput");
@@ -563,6 +572,87 @@ function routeIsVisible(){
 
 function routeCanExport(){
   return state.routeMode === "locked" && state.routePoints.length >= 2;
+}
+
+function mapRotationSupported(){
+  return Boolean(map && typeof map.setBearing === "function" && typeof map.getBearing === "function");
+}
+
+function normalizedBearing(){
+  if(!mapRotationSupported()) return 0;
+  const bearing = map.getBearing();
+  return ((bearing % 360) + 360) % 360;
+}
+
+function updateBearingResetControl(){
+  if(!bearingResetButton) return;
+  const bearing = normalizedBearing();
+  const active = Math.abs(bearing) > 0.5 && Math.abs(bearing - 360) > 0.5;
+  bearingResetButton.classList.toggle("active", active);
+  bearingResetButton.title = t("resetBearing");
+  bearingResetButton.setAttribute("aria-label", t("resetBearing"));
+  const arrow = bearingResetButton.querySelector("span");
+  if(arrow) arrow.style.transform = `rotate(${-bearing}deg)`;
+}
+
+function resetMapBearing(){
+  if(!mapRotationSupported()) return;
+  map.setBearing(0);
+  updateBearingResetControl();
+}
+
+function addBearingResetControl(){
+  if(!mapRotationSupported() || bearingResetControl) return;
+  const BearingResetControl = L.Control.extend({
+    options:{position:"topright"},
+    onAdd(){
+      const button = L.DomUtil.create("button", "leaflet-bar bearing-reset-control");
+      button.type = "button";
+      button.innerHTML = "<span>N</span>";
+      L.DomEvent.disableClickPropagation(button);
+      L.DomEvent.on(button, "click", event=>{
+        L.DomEvent.stop(event);
+        resetMapBearing();
+      });
+      bearingResetButton = button;
+      updateBearingResetControl();
+      return button;
+    }
+  });
+  bearingResetControl = new BearingResetControl();
+  bearingResetControl.addTo(map);
+  map.on("rotate", updateBearingResetControl);
+}
+
+function renderRouteVisual(){
+  routeVisualFrame = null;
+  if(!routeVisualPath) return;
+  if(!routeIsVisible() || state.routePoints.length < 2){
+    routeVisualPath.setAttribute("d", "");
+    return;
+  }
+  const pathData = state.routePoints.map((point, index)=>{
+    const screenPoint = map.latLngToContainerPoint(latLngFromPoint(point));
+    return `${index ? "L" : "M"}${screenPoint.x.toFixed(2)} ${screenPoint.y.toFixed(2)}`;
+  }).join(" ");
+  routeVisualPath.setAttribute("d", pathData);
+}
+
+function scheduleRouteVisualRender(){
+  if(routeVisualFrame != null) return;
+  routeVisualFrame = window.requestAnimationFrame(renderRouteVisual);
+}
+
+function addRouteVisualOverlay(){
+  if(routeVisualOverlay) return;
+  routeVisualOverlay = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+  routeVisualOverlay.classList.add("route-visual-overlay");
+  routeVisualOverlay.setAttribute("aria-hidden", "true");
+  routeVisualPath = document.createElementNS("http://www.w3.org/2000/svg", "path");
+  routeVisualPath.classList.add("route-visual-line");
+  routeVisualOverlay.appendChild(routeVisualPath);
+  map.getContainer().appendChild(routeVisualOverlay);
+  map.on("rotate move zoom viewreset resize", scheduleRouteVisualRender);
 }
 
 function pointFromLatLng(latlng){
@@ -810,6 +900,7 @@ function updateDraggedRoutePoint(index, latlng){
   if(!state.routePoints[index]) return;
   state.routePoints[index] = pointFromLatLng(latlng);
   drawnRouteLine.setLatLngs(state.routePoints.map(latLngFromPoint));
+  scheduleRouteVisualRender();
   updateDistanceMetrics();
 }
 
@@ -860,6 +951,7 @@ function renderDrawnRoute(){
     marker.addTo(routePointLayer);
   });
   syncRouteVisibility();
+  scheduleRouteVisualRender();
   updateDistanceMetrics();
   renderRouteControls();
 }
@@ -1978,6 +2070,7 @@ function applyLanguage(){
   document.getElementById("mapElementsLabelText").textContent = t("mapElementsLabel");
   document.getElementById("mapElementsHint").textContent = `(${t("filterHint")})`;
   document.getElementById("areasLabel").textContent = t("areasLabel");
+  updateBearingResetControl();
   document.querySelector(".route-draw-controls").setAttribute("aria-label", t("routeDrawLabel"));
   document.getElementById("routeDrawFootnote").textContent = t("routeDrawFootnote");
   renderRouteControls();
@@ -1999,8 +2092,18 @@ function setLanguage(lang){
 }
 
 function init(){
-  map = L.map("map", {zoomControl:true, minZoom:7, maxZoom:18}).setView([state.lat, state.lng], 10);
+  map = L.map("map", {
+    zoomControl:true,
+    minZoom:7,
+    maxZoom:18,
+    rotate:true,
+    touchRotate:true,
+    shiftKeyRotate:true,
+    rotateControl:false
+  }).setView([state.lat, state.lng], 10);
   L.tileLayer(GSI_TILE_URL, {minZoom:7, maxZoom:18, attribution:GSI_ATTRIBUTION}).addTo(map);
+  addRouteVisualOverlay();
+  addBearingResetControl();
   if(map.attributionControl) map.attributionControl.addAttribution(BATHROOM_ATTRIBUTION);
   const majorStationPane = map.createPane("majorStationPane");
   majorStationPane.style.zIndex = "680";
@@ -2011,7 +2114,7 @@ function init(){
   markerLayer = L.layerGroup().addTo(map);
   routeCircle = L.circle([state.lat, state.lng], {radius:state.radiusKm * 1000, color:"#1f8fff", weight:3, dashArray:"8 9", fillColor:"#22c55e", fillOpacity:.12}).addTo(map);
   centerMarker = L.marker([state.lat, state.lng], {draggable:true}).addTo(map);
-  drawnRouteLine = L.polyline([], {color:"#006dff", weight:5, opacity:.95, lineCap:"round", lineJoin:"round", bubblingMouseEvents:false});
+  drawnRouteLine = L.polyline([], {color:"transparent", weight:18, opacity:0, className:"route-hit-target", bubblingMouseEvents:false});
   routePointLayer = L.layerGroup();
   const restoredRoute = loadSavedRoute();
   centerMarker.on("dragend", event=>{

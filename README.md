@@ -42,6 +42,8 @@ ready for Pages because `index.html` is at the repository root.
 Use:
 
 - Use the `<` / `>` side tab to open or close the planner panel.
+- Rotate with two fingers on touch devices or hold Shift while dragging on
+  desktop. Use the `N` control to return the map to north-up.
 - Click the map to place the route center.
 - Use the `Radius km` dropdown to choose a whole-kilometer radius from 1 to 43.
 - Drag the center marker for finer placement.
