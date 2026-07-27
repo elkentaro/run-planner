@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<meta name="run-planner-version" content="2026.07.27.3">
+<meta name="run-planner-version" content="2026.07.27.4">
 <title>Run Planner Map</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <script data-goatcounter="https://runplanhacker.goatcounter.com/count"
@@ -228,7 +228,7 @@
 <script>
 const DATA = window.RUN_PLANNER_DATA || {locations:[], areas:[], counts:{byBrand:{}, byArea:{}}};
 const MAJOR_STATIONS = window.RUN_PLANNER_MAJOR_STATIONS || [];
-const APP_VERSION = "2026.07.27.3";
+const APP_VERSION = "2026.07.27.4";
 const DEFAULT_CENTER = {lat:35.685175,lng:139.752800};
 const GSI_TILE_URL = "https://cyberjapandata.gsi.go.jp/xyz/std/{z}/{x}/{y}.png";
 const GSI_ATTRIBUTION = '<a href="https://maps.gsi.go.jp/development/ichiran.html">地理院タイル</a>';
@@ -1759,8 +1759,7 @@ function cyclePortLocation(item){
     name:item.name || t("cyclePort"),
     lat,
     lng,
-    mapUrl:`https://www.google.com/maps/search/?api=1&query=${lat.toFixed(7)},${lng.toFixed(7)}`,
-    url:(cyclePortData && cyclePortData.source) || CYCLE_PORT_SOURCE_URL
+    mapUrl:`https://www.google.com/maps/search/?api=1&query=${lat.toFixed(7)},${lng.toFixed(7)}`
   };
 }
 
