@@ -5,36 +5,87 @@ This folder is a backend-free run planner that can be hosted as static files.
 Files:
 
 - `index.html` - the standalone map UI
-- `locations.js` - generated store overlay data
-- `major-stations.js` - generated major-station visual cue data
-- `convenience-stores.json` - generated convenience-store overlay data, loaded only when enabled
-- `docomo-cycle-ports.json` - generated Docomo cycle-port overlay data, loaded only when enabled
+- `data/*.json` - one independently loaded static snapshot per location type
+- `scripts/generate_*.py` - one local generator per source
+- `scripts/refresh_location_data.py` - validated local refresh and optional Git publisher
 
-Rebuild the store data:
+The live page does not query location providers. Each map layer reads its own
+JSON file with `cache: no-store`; a missing or invalid source disables only that
+source's row. Every JSON request also carries the visible `APP_VERSION` as a
+cache-busting query parameter. Each snapshot records its own `schemaVersion`
+and `generatedAt`, while Git history records the actual content changes.
 
-```bash
-python3 scripts/build_static_run_planner_data.py
-```
+## Local location refresh
 
-Rebuild the convenience-store data:
-
-```bash
-python3 scripts/download_convenience_stores.py
-```
-
-Refresh the Docomo cycle-port snapshot from the public Tokyo Bike Share My Map:
+Refresh every source locally:
 
 ```bash
-python3 scripts/download_docomo_cycle_ports.py
+python3 scripts/refresh_location_data.py
 ```
 
-This currently downloads FamilyMart and 7-Eleven for Tokyo, Kanagawa, Saitama,
-Chiba, and Tochigi. Lawson is intentionally not included yet because a reliable
-source is not wired into the downloader.
+The public-toilet generator uses a rate-limited grid and persistent checkpoints
+under `.cache/public-toilets/`. A complete first run can take hours. Run it in a
+screen session:
 
-The page uses public GSI raster tiles, the Leaflet CDN, and the OpenStreetMap
-Overpass API when public bathrooms are enabled. It does not call the CardioTrack
-Flask app or use local MBTiles.
+```bash
+screen -S run-planner-locations
+python3 scripts/refresh_location_data.py --watch --publish
+```
+
+Detach with `Ctrl-A`, then `D`. Reattach with:
+
+```bash
+screen -r run-planner-locations
+```
+
+`--watch` starts immediately, then runs again every 10 days. Stop it with
+`Ctrl-C`.
+
+Successful toilet grid cells are reused for 10 days. An interrupted run resumes
+from the remaining stale or missing cells. If one source fails, its existing
+JSON remains untouched while other valid sources can still update and publish.
+The command returns a nonzero status so the failed source is visible to
+monitoring.
+
+For a fast refresh that excludes the long-running toilet source:
+
+```bash
+python3 scripts/refresh_location_data.py --skip-public-toilets
+```
+
+Refresh one or more sources:
+
+```bash
+python3 scripts/refresh_location_data.py --source starbucks
+python3 scripts/refresh_location_data.py --source familymart --source seven-eleven
+```
+
+After reviewing local changes, generate, commit, and push only changed JSON:
+
+```bash
+python3 scripts/refresh_location_data.py --publish
+```
+
+This is intentionally a local operation. There is no GitHub Actions updater.
+The publisher refuses to run when unrelated changes are already staged.
+
+Independent snapshots and generators:
+
+| Snapshot | Generator |
+| --- | --- |
+| `data/anytime-fitness.json` | `scripts/generate_anytime_fitness.py` |
+| `data/withgreen.json` | `scripts/generate_withgreen.py` |
+| `data/crisp.json` | `scripts/generate_crisp.py` |
+| `data/starbucks.json` | `scripts/generate_starbucks.py` |
+| `data/familymart.json` | `scripts/generate_familymart.py` |
+| `data/seven-eleven.json` | `scripts/generate_seven_eleven.py` |
+| `data/major-stations.json` | `scripts/generate_major_stations.py` |
+| `data/public-toilets.json` | `scripts/generate_public_toilets.py` |
+| `data/docomo-cycle-ports.json` | `scripts/download_docomo_cycle_ports.py` |
+| `data/runner-shops.json` | `scripts/generate_runner_shops.py` |
+
+The page still uses public GSI raster tiles and the Leaflet CDN, but it does not
+call live location APIs, the CardioTrack Flask app, or local MBTiles.
 
 GitHub Pages:
 

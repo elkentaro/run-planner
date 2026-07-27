@@ -5,12 +5,13 @@ from __future__ import annotations
 
 import argparse
 import hashlib
-import json
 import sys
 import urllib.request
 import xml.etree.ElementTree as ET
 from datetime import datetime, timezone
 from pathlib import Path
+
+from location_data_common import write_json_if_changed
 
 
 MAP_ID = "1L2l1EnQJhCNlm_Xxkp9RTjIj68Q"
@@ -85,6 +86,7 @@ def build_dataset(kml: bytes) -> dict[str, object]:
     latitudes = [float(port["lat"]) for port in ports]
     longitudes = [float(port["lng"]) for port in ports]
     return {
+        "schemaVersion": 1,
         "generatedAt": datetime.now(timezone.utc).isoformat(),
         "source": SOURCE_URL,
         "sourceName": "Tokyo Bike Share Station Map",
@@ -99,16 +101,9 @@ def build_dataset(kml: bytes) -> dict[str, object]:
     }
 
 
-def write_json(path: Path, data: object) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    with path.open("w", encoding="utf-8") as handle:
-        json.dump(data, handle, ensure_ascii=False, separators=(",", ":"))
-        handle.write("\n")
-
-
 def parse_args(argv: list[str]) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--output", default="docomo-cycle-ports.json", help="output JSON path")
+    parser.add_argument("--output", default="data/docomo-cycle-ports.json", help="output JSON path")
     parser.add_argument("--input", help="read an existing KML file instead of downloading it")
     parser.add_argument("--url", default=KML_URL, help="KML download URL")
     return parser.parse_args(argv)
@@ -119,11 +114,12 @@ def main(argv: list[str]) -> int:
     try:
         kml = Path(args.input).read_bytes() if args.input else fetch_kml(args.url)
         dataset = build_dataset(kml)
-        write_json(Path(args.output), dataset)
+        changed = write_json_if_changed(Path(args.output), dataset)
     except (OSError, ET.ParseError, ValueError) as error:
         print(f"cycle-port download failed: {error}", file=sys.stderr)
         return 1
-    print(f"wrote {args.output} with {dataset['counts']['total']} ports")
+    state = "updated" if changed else "unchanged"
+    print(f"{state} {args.output} ({dataset['counts']['total']} ports)")
     return 0
 
 

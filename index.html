@@ -221,14 +221,14 @@
   </button>
 </div>
 
-<script src="./locations.js"></script>
-<script src="./major-stations.js"></script>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://unpkg.com/leaflet-rotate@0.2.8/dist/leaflet-rotate.js"></script>
 <script>
-const DATA = window.RUN_PLANNER_DATA || {locations:[], areas:[], counts:{byBrand:{}, byArea:{}}};
-const MAJOR_STATIONS = window.RUN_PLANNER_MAJOR_STATIONS || [];
-const APP_VERSION = "2026.07.27.4";
+const TARGET_AREAS = ["東京都", "神奈川県", "埼玉県", "千葉県", "栃木県"];
+const DATA = {locations:[], areas:TARGET_AREAS, counts:{total:0, byBrand:{}, byArea:{}}};
+let MAJOR_STATIONS = [];
+let RUNNER_LOCATIONS = [];
+const APP_VERSION = "2026.07.27.5";
 const DEFAULT_CENTER = {lat:35.685175,lng:139.752800};
 const GSI_TILE_URL = "https://cyberjapandata.gsi.go.jp/xyz/std/{z}/{x}/{y}.png";
 const GSI_ATTRIBUTION = '<a href="https://maps.gsi.go.jp/development/ichiran.html">地理院タイル</a>';
@@ -236,17 +236,12 @@ const DRAW_ZOOM = 16;
 const ROUTE_STORAGE_KEY = "runPlannerDrawnRoute";
 const GPX_MIME_TYPE = "application/gpx+xml";
 const BATHROOM_STORAGE_KEY = "runPlannerBathrooms";
-const BATHROOM_CACHE_KEY = "runPlannerBathroomCacheV1";
-const BATHROOM_CACHE_TTL_MS = 7 * 24 * 60 * 60 * 1000;
-const BATHROOM_CACHE_MAX_ENTRIES = 8;
+const BATHROOM_DATA_URL = "./data/public-toilets.json";
 const BATHROOM_EMOJI = "🚾";
 const BATHROOM_MIN_ZOOM = 15;
 const BATHROOM_MARKER_LIMIT = 500;
-const BATHROOM_ENDPOINT = "https://overpass-api.de/api/interpreter";
 const BATHROOM_ATTRIBUTION = 'Bathroom data &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap contributors</a>';
-const BATHROOM_EXCLUDED_ACCESS = new Set(["private", "customers", "no"]);
-const BATHROOM_CACHE_TAGS = ["name", "name:ja", "name:en", "access", "toilets:access", "opening_hours", "fee", "wheelchair", "changing_table", "unisex", "male", "female"];
-const CYCLE_PORT_DATA_URL = "./docomo-cycle-ports.json";
+const CYCLE_PORT_DATA_URL = "./data/docomo-cycle-ports.json";
 const CYCLE_PORT_SOURCE_URL = "https://www.google.com/maps/d/viewer?mid=1L2l1EnQJhCNlm_Xxkp9RTjIj68Q";
 const CYCLE_PORT_STORAGE_KEY = "runPlannerDocomoCyclePorts";
 const CYCLE_PORT_EMOJI = "🚲";
@@ -254,28 +249,19 @@ const CYCLE_PORT_MIN_ZOOM = 15;
 const CYCLE_PORT_MARKER_LIMIT = 500;
 const CYCLE_PORT_ATTRIBUTION = `Cycle-port source: <a href="${CYCLE_PORT_SOURCE_URL}">Tokyo Bike Share Station Map</a>`;
 const BRAND_META = {
-  "Anytime Fitness": {short:"AF", className:"brand-af", labels:{en:"Anytime Fitness", ja:"エニタイムフィットネス"}},
-  "WithGreen": {short:"WG", className:"brand-wg", labels:{en:"WithGreen", ja:"ウィズグリーン"}},
-  "CRISP": {short:"CR", className:"brand-cr", labels:{en:"CRISP SALAD WORKS", ja:"クリスプ・サラダワークス"}},
-  "Starbucks": {short:"SB", className:"brand-sb", labels:{en:"Starbucks", ja:"スターバックス"}}
+  "Anytime Fitness": {id:"anytime-fitness", url:"./data/anytime-fitness.json", minimum:500, short:"AF", className:"brand-af", labels:{en:"Anytime Fitness", ja:"エニタイムフィットネス"}},
+  "WithGreen": {id:"withgreen", url:"./data/withgreen.json", minimum:25, short:"WG", className:"brand-wg", labels:{en:"WithGreen", ja:"ウィズグリーン"}},
+  "CRISP": {id:"crisp", url:"./data/crisp.json", minimum:40, short:"CR", className:"brand-cr", labels:{en:"CRISP SALAD WORKS", ja:"クリスプ・サラダワークス"}},
+  "Starbucks": {id:"starbucks", url:"./data/starbucks.json", minimum:650, short:"SB", className:"brand-sb", labels:{en:"Starbucks", ja:"スターバックス"}}
 };
-const CONVENIENCE_DATA_URL = "./convenience-stores.json";
 const CONVENIENCE_MIN_ZOOM = 14;
 const CONVENIENCE_MARKER_LIMIT = 600;
 const CONVENIENCE_META = {
-  "FamilyMart": {short:"Family Mart", markerText:"FM", className:"brand-fm", labels:{en:"Family Mart", ja:"ファミリーマート"}},
-  "7-Eleven": {short:"7/11", markerText:"7/11", className:"brand-seven", labels:{en:"7-Eleven", ja:"セブン-イレブン"}}
+  "FamilyMart": {id:"familymart", url:"./data/familymart.json", minimum:4000, short:"Family Mart", markerText:"FM", className:"brand-fm", labels:{en:"Family Mart", ja:"ファミリーマート"}},
+  "7-Eleven": {id:"seven-eleven", url:"./data/seven-eleven.json", minimum:6000, short:"7/11", markerText:"7/11", className:"brand-seven", labels:{en:"7-Eleven", ja:"セブン-イレブン"}}
 };
-const RUNNER_LOCATIONS = [
-  {
-    name:"RUNPOYA (ランポヤ)",
-    address:"〒142-0053 東京都品川区中延1-4-17 サンパークビル103",
-    lat:35.6129214,
-    lng:139.7114592,
-    mapUrl:"https://www.google.com/maps/search/?api=1&query=35.6129214,139.7114592",
-    homepageUrl:"https://runpoya.com/shop-info/"
-  }
-];
+const MAJOR_STATION_DATA_URL = "./data/major-stations.json";
+const RUNNER_SHOP_DATA_URL = "./data/runner-shops.json";
 const AREA_LABELS = {
   en: {"東京都":"Tokyo","神奈川県":"Kanagawa","埼玉県":"Saitama","千葉県":"Chiba","栃木県":"Tochigi"},
   ja: {"東京都":"東京都","神奈川県":"神奈川県","埼玉県":"埼玉県","千葉県":"千葉県","栃木県":"栃木県"}
@@ -490,7 +476,7 @@ const state = {
   radiusKm:2,
   brands:new Set(Object.keys(BRAND_META)),
   convenienceBrands:new Set(),
-  areas:new Set(DATA.areas || []),
+  areas:new Set(TARGET_AREAS),
   showMajorStations:localStorage.getItem("runPlannerMajorStations") !== "0",
   showBathrooms:localStorage.getItem(BATHROOM_STORAGE_KEY) === "1",
   bathroomStatus:"idle",
@@ -506,18 +492,13 @@ const state = {
   lastStatusKey:"clickPrompt",
   lastStatusArgs:[]
 };
-let convenienceData = null;
-let convenienceLoadPromise = null;
-let bathroomFetchBounds = null;
-let bathroomFetchController = null;
-let bathroomFetchTimer = null;
-let bathroomFetchId = 0;
-let bathroomFailedKey = "";
-let bathroomCacheLoaded = false;
-let bathroomCacheEntries = [];
-const bathroomById = new Map();
+const sourceStates = new Map();
+let convenienceData = {generatedAt:"", counts:{total:0, byBrand:{}, byArea:{}}, stores:[]};
+let bathroomData = null;
+let bathroomLoadPromise = null;
 let cyclePortData = null;
 let cyclePortLoadPromise = null;
+let majorStationStatus = "loading";
 let map, centerMarker, routeCircle, markerLayer, convenienceLayer, bathroomLayer, cyclePortLayer, majorStationLayer, drawnRouteLine, routePointLayer, routeDistancePopupTimer, routeVisualOverlay, routeVisualPath, routeVisualFrame, bearingResetControl, bearingResetButton;
 
 const locationInput = document.getElementById("locationInput");
@@ -559,6 +540,172 @@ function formatDate(value){
   if(Number.isNaN(date.getTime())) return t("staticData");
   const locale = state.lang === "ja" ? "ja-JP" : undefined;
   return `${t("updated")} ${date.toLocaleString(locale, {month:"short", day:"numeric", hour:"2-digit", minute:"2-digit"})}`;
+}
+
+function fetchJson(url){
+  const separator = url.includes("?") ? "&" : "?";
+  const versionedUrl = `${url}${separator}v=${encodeURIComponent(APP_VERSION)}`;
+  return fetch(versionedUrl, {cache:"no-store"}).then(response=>{
+    if(!response.ok) throw new Error(`HTTP ${response.status}`);
+    return response.json();
+  });
+}
+
+function validLocationItem(item){
+  if(!item || !item.id) return false;
+  const lat = Number(item.lat);
+  const lng = Number(item.lng);
+  return Number.isFinite(lat) && Number.isFinite(lng) && lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180;
+}
+
+function sourceState(meta){
+  return sourceStates.get(meta.id) || {status:"loading", data:null};
+}
+
+function rebuildPrimaryData(){
+  const locations = [];
+  const byBrand = {};
+  const byArea = Object.fromEntries(TARGET_AREAS.map(area=>[area, 0]));
+  const generatedDates = [];
+  for(const [brand, meta] of Object.entries(BRAND_META)){
+    const loaded = sourceState(meta);
+    const items = loaded.data && Array.isArray(loaded.data.locations) ? loaded.data.locations : [];
+    locations.push(...items);
+    byBrand[brand] = items.length;
+    for(const item of items){
+      if(item.area in byArea) byArea[item.area] += 1;
+    }
+    if(loaded.data && loaded.data.generatedAt) generatedDates.push(loaded.data.generatedAt);
+  }
+  DATA.locations = locations;
+  DATA.generatedAt = generatedDates.sort().at(-1) || "";
+  DATA.counts = {total:locations.length, byBrand, byArea};
+}
+
+function loadStoreSource(brand, meta, {convenience=false}={}){
+  const existing = sourceStates.get(meta.id);
+  if(existing && existing.promise) return existing.promise;
+  if(existing && existing.status === "ready") return Promise.resolve(existing.data);
+  if(existing && existing.status === "error") return Promise.resolve(null);
+  const record = existing || {status:"loading", data:null, promise:null};
+  record.status = "loading";
+  record.promise = fetchJson(meta.url)
+    .then(data=>{
+      if(!data || !Array.isArray(data.locations)) throw new Error("invalid locations dataset");
+      const locations = data.locations.filter(validLocationItem);
+      const total = Number(data.counts && data.counts.total);
+      if(
+        locations.length !== data.locations.length ||
+        locations.length < meta.minimum ||
+        total !== locations.length ||
+        locations.some(item=>item.brand !== brand || !TARGET_AREAS.includes(item.area))
+      ){
+        throw new Error("incomplete or invalid locations dataset");
+      }
+      record.data = {...data, locations};
+      record.status = "ready";
+      if(convenience){
+        rebuildConvenienceData();
+        renderConvenienceStores(false);
+      }else{
+        rebuildPrimaryData();
+        renderMarkers(false);
+      }
+      renderFilters();
+      updateDataSummary();
+      return record.data;
+    })
+    .catch(error=>{
+      record.status = "error";
+      record.error = error;
+      if(convenience) state.convenienceBrands.delete(brand);
+      else state.brands.delete(brand);
+      renderFilters();
+      return null;
+    })
+    .finally(()=>{ record.promise = null; });
+  sourceStates.set(meta.id, record);
+  renderFilters();
+  return record.promise;
+}
+
+function rebuildConvenienceData(){
+  const stores = [];
+  const byBrand = {};
+  const byArea = Object.fromEntries(TARGET_AREAS.map(area=>[area, 0]));
+  const generatedDates = [];
+  for(const [brand, meta] of Object.entries(CONVENIENCE_META)){
+    const loaded = sourceState(meta);
+    const items = loaded.data && Array.isArray(loaded.data.locations) ? loaded.data.locations : [];
+    stores.push(...items);
+    byBrand[brand] = items.length;
+    for(const item of items){
+      if(item.area in byArea) byArea[item.area] += 1;
+    }
+    if(loaded.data && loaded.data.generatedAt) generatedDates.push(loaded.data.generatedAt);
+  }
+  convenienceData = {
+    generatedAt:generatedDates.sort().at(-1) || "",
+    counts:{total:stores.length, byBrand, byArea},
+    stores
+  };
+}
+
+function updateDataSummary(){
+  const updatedLabel = document.getElementById("updatedLabel");
+  const sourceLabel = document.getElementById("sourceLabel");
+  if(updatedLabel) updatedLabel.textContent = formatDate(DATA.generatedAt);
+  if(sourceLabel) sourceLabel.textContent = `${DATA.locations.length} ${t("stores")}`;
+}
+
+function loadMajorStations(){
+  majorStationStatus = "loading";
+  return fetchJson(MAJOR_STATION_DATA_URL)
+    .then(data=>{
+      const stations = Array.isArray(data.stations) ? data.stations.filter(validLocationItem) : [];
+      if(
+        !Array.isArray(data.stations) ||
+        stations.length !== data.stations.length ||
+        stations.length < 90 ||
+        Number(data.counts && data.counts.total) !== stations.length
+      ){
+        throw new Error("incomplete or invalid station dataset");
+      }
+      MAJOR_STATIONS = stations;
+      majorStationStatus = "ready";
+      renderMajorStations();
+      renderFilters();
+    })
+    .catch(()=>{
+      MAJOR_STATIONS = [];
+      majorStationStatus = "error";
+      state.showMajorStations = false;
+      renderFilters();
+    });
+}
+
+function loadRunnerShops(){
+  return fetchJson(RUNNER_SHOP_DATA_URL)
+    .then(data=>{
+      RUNNER_LOCATIONS = Array.isArray(data.locations)
+        ? data.locations.filter(validLocationItem).map(item=>({
+            ...item,
+            mapUrl:item.directionsUrl,
+            homepageUrl:item.url
+          }))
+        : [];
+      if(RUNNER_LOCATIONS.length < 1) throw new Error("empty running-shop dataset");
+      renderMarkers(false);
+    })
+    .catch(()=>{ RUNNER_LOCATIONS = []; });
+}
+
+function loadInitialLocationData(){
+  for(const [brand, meta] of Object.entries(BRAND_META)){
+    loadStoreSource(brand, meta);
+  }
+  loadMajorStations();
+  loadRunnerShops();
 }
 
 function formatKm(value){
@@ -1413,259 +1560,31 @@ function bathroomLocation(item){
   };
 }
 
-function bathroomIsPublic(tags){
-  const access = String(tags.access || tags["toilets:access"] || "").toLowerCase();
-  return !access.split(/[;,]/).some(part=>BATHROOM_EXCLUDED_ACCESS.has(part.trim()));
-}
-
-function bathroomFromOsmElement(element){
-  const center = element.center || {};
-  const lat = Number(element.lat ?? center.lat);
-  const lng = Number(element.lon ?? center.lon);
-  const tags = element.tags || {};
-  if(tags.amenity !== "toilets" || !validCoord(lat, lng) || !bathroomIsPublic(tags)) return null;
-  return {
-    id:`osm-${element.type}-${element.id}`,
-    osmType:element.type,
-    osmId:element.id,
-    lat,
-    lng,
-    tags
-  };
-}
-
-function bathroomCacheTags(tags){
-  const cached = {};
-  for(const key of BATHROOM_CACHE_TAGS){
-    if(tags && tags[key]){
-      cached[key] = String(tags[key]).slice(0, 300);
-    }
+function ensureBathroomsLoaded(){
+  if(bathroomData) return Promise.resolve(bathroomData);
+  if(!bathroomLoadPromise){
+    state.bathroomStatus = "loading";
+    bathroomLoadPromise = fetchJson(BATHROOM_DATA_URL)
+      .then(data=>{
+        const toilets = Array.isArray(data.toilets) ? data.toilets.filter(validLocationItem) : [];
+        if(!toilets.length) throw new Error("empty public-toilet dataset");
+        bathroomData = {...data, toilets};
+        state.bathroomStatus = "ready";
+        return bathroomData;
+      })
+      .catch(error=>{
+        state.bathroomStatus = "error";
+        throw error;
+      })
+      .finally(()=>{ bathroomLoadPromise = null; });
   }
-  return cached;
-}
-
-function bathroomItemForCache(item){
-  if(!item || !validCoord(Number(item.lat), Number(item.lng)) || !item.id) return null;
-  return {
-    id:String(item.id),
-    osmType:String(item.osmType || "node"),
-    osmId:item.osmId,
-    lat:Number(item.lat),
-    lng:Number(item.lng),
-    tags:bathroomCacheTags(item.tags || {})
-  };
-}
-
-function normalizeCachedBathroomItem(item){
-  const normalized = bathroomItemForCache(item);
-  if(!normalized || !normalized.id) return null;
-  return normalized;
-}
-
-function bathroomBoundsArray(bounds){
-  return [
-    Number(bounds.getSouth().toFixed(7)),
-    Number(bounds.getWest().toFixed(7)),
-    Number(bounds.getNorth().toFixed(7)),
-    Number(bounds.getEast().toFixed(7))
-  ];
-}
-
-function bathroomBoundsFromArray(value){
-  if(!Array.isArray(value) || value.length !== 4) return null;
-  const [south, west, north, east] = value.map(Number);
-  if(!validCoord(south, west) || !validCoord(north, east) || south > north || west > east) return null;
-  return L.latLngBounds([south, west], [north, east]);
-}
-
-function bathroomBoundsKey(bounds){
-  return [
-    bounds.getSouth().toFixed(3),
-    bounds.getWest().toFixed(3),
-    bounds.getNorth().toFixed(3),
-    bounds.getEast().toFixed(3)
-  ].join(",");
-}
-
-function bathroomQuery(bounds){
-  const south = bounds.getSouth().toFixed(7);
-  const west = bounds.getWest().toFixed(7);
-  const north = bounds.getNorth().toFixed(7);
-  const east = bounds.getEast().toFixed(7);
-  return `[out:json][timeout:18];
-(
-  node["amenity"="toilets"](${south},${west},${north},${east});
-  way["amenity"="toilets"](${south},${west},${north},${east});
-  relation["amenity"="toilets"](${south},${west},${north},${east});
-);
-out center ${BATHROOM_MARKER_LIMIT};`;
-}
-
-function saveBathroomCache(){
-  const payload = {
-    version:1,
-    savedAt:Date.now(),
-    entries:bathroomCacheEntries.map(entry=>({
-      key:entry.key,
-      fetchedAt:entry.fetchedAt,
-      bounds:entry.bounds,
-      items:entry.items
-    }))
-  };
-  try{
-    localStorage.setItem(BATHROOM_CACHE_KEY, JSON.stringify(payload));
-  }catch(error){
-    bathroomCacheEntries = bathroomCacheEntries.slice(0, Math.max(1, Math.floor(bathroomCacheEntries.length / 2)));
-    try{
-      localStorage.setItem(BATHROOM_CACHE_KEY, JSON.stringify({...payload, entries:bathroomCacheEntries}));
-    }catch(retryError){}
-  }
-}
-
-function loadBathroomCache(){
-  if(bathroomCacheLoaded) return;
-  bathroomCacheLoaded = true;
-  let dirty = false;
-  let payload = null;
-  try{
-    payload = JSON.parse(localStorage.getItem(BATHROOM_CACHE_KEY) || "null");
-  }catch(error){
-    dirty = true;
-  }
-  const now = Date.now();
-  const entries = payload && Array.isArray(payload.entries) ? payload.entries : [];
-  bathroomCacheEntries = [];
-  for(const entry of entries){
-    const fetchedAt = Number(entry && entry.fetchedAt);
-    const bounds = bathroomBoundsFromArray(entry && entry.bounds);
-    if(!Number.isFinite(fetchedAt) || now - fetchedAt > BATHROOM_CACHE_TTL_MS || !bounds){
-      dirty = true;
-      continue;
-    }
-    const items = Array.isArray(entry.items) ? entry.items.map(normalizeCachedBathroomItem).filter(Boolean) : [];
-    for(const item of items){
-      bathroomById.set(item.id, item);
-    }
-    bathroomCacheEntries.push({
-      key:entry.key || bathroomBoundsKey(bounds),
-      fetchedAt,
-      bounds:bathroomBoundsArray(bounds),
-      items
-    });
-  }
-  bathroomCacheEntries.sort((left, right)=>right.fetchedAt - left.fetchedAt);
-  if(bathroomCacheEntries.length > BATHROOM_CACHE_MAX_ENTRIES){
-    bathroomCacheEntries = bathroomCacheEntries.slice(0, BATHROOM_CACHE_MAX_ENTRIES);
-    dirty = true;
-  }
-  if(dirty) saveBathroomCache();
-}
-
-function cachedBathroomBoundsContaining(bounds){
-  loadBathroomCache();
-  for(const entry of bathroomCacheEntries){
-    const cachedBounds = bathroomBoundsFromArray(entry.bounds);
-    if(cachedBounds && cachedBounds.contains(bounds)) return cachedBounds;
-  }
-  return null;
-}
-
-function rememberBathroomCache(bounds, items){
-  loadBathroomCache();
-  const key = bathroomBoundsKey(bounds);
-  const now = Date.now();
-  const cachedItems = items.map(bathroomItemForCache).filter(Boolean);
-  bathroomCacheEntries = bathroomCacheEntries
-    .filter(entry=>entry.key !== key && now - Number(entry.fetchedAt) <= BATHROOM_CACHE_TTL_MS);
-  bathroomCacheEntries.unshift({
-    key,
-    fetchedAt:now,
-    bounds:bathroomBoundsArray(bounds),
-    items:cachedItems
-  });
-  bathroomCacheEntries = bathroomCacheEntries.slice(0, BATHROOM_CACHE_MAX_ENTRIES);
-  saveBathroomCache();
-}
-
-function queueBathroomFetch(){
-  if(!state.showBathrooms || !map || map.getZoom() < BATHROOM_MIN_ZOOM) return;
-  if(bathroomFetchTimer) window.clearTimeout(bathroomFetchTimer);
-  state.bathroomLoading = true;
-  state.bathroomStatus = "loading";
-  bathroomFetchTimer = window.setTimeout(fetchBathroomsForCurrentView, 300);
-}
-
-async function fetchBathroomsForCurrentView(){
-  bathroomFetchTimer = null;
-  if(!state.showBathrooms || !map || map.getZoom() < BATHROOM_MIN_ZOOM){
-    state.bathroomLoading = false;
-    renderBathrooms();
-    return;
-  }
-  const currentBounds = map.getBounds();
-  if(bathroomFetchBounds && bathroomFetchBounds.contains(currentBounds)){
-    state.bathroomLoading = false;
-    renderBathrooms();
-    return;
-  }
-  const cachedBounds = cachedBathroomBoundsContaining(currentBounds);
-  if(cachedBounds){
-    bathroomFetchBounds = cachedBounds;
-    bathroomFailedKey = "";
-    state.bathroomLoading = false;
-    state.bathroomStatus = "ready";
-    renderBathrooms();
-    return;
-  }
-  const fetchBounds = currentBounds.pad(0.35);
-  const boundsKey = bathroomBoundsKey(fetchBounds);
-  if(bathroomFailedKey === boundsKey && state.bathroomStatus === "error"){
-    state.bathroomLoading = false;
-    renderFilters();
-    return;
-  }
-  if(bathroomFetchController) bathroomFetchController.abort();
-  const controller = new AbortController();
-  bathroomFetchController = controller;
-  const requestId = ++bathroomFetchId;
-  try{
-    const response = await fetch(`${BATHROOM_ENDPOINT}?data=${encodeURIComponent(bathroomQuery(fetchBounds))}`, {
-      signal:controller.signal,
-      headers:{Accept:"application/json"}
-    });
-    if(!response.ok) throw new Error(`Overpass ${response.status}`);
-    const payload = await response.json();
-    if(requestId !== bathroomFetchId) return;
-    const fetchedItems = [];
-    for(const element of payload.elements || []){
-      const item = bathroomFromOsmElement(element);
-      if(item){
-        bathroomById.set(item.id, item);
-        fetchedItems.push(item);
-      }
-    }
-    bathroomFetchBounds = fetchBounds;
-    rememberBathroomCache(fetchBounds, fetchedItems);
-    bathroomFailedKey = "";
-    state.bathroomStatus = "ready";
-  }catch(error){
-    if(error.name === "AbortError") return;
-    if(requestId !== bathroomFetchId) return;
-    bathroomFailedKey = boundsKey;
-    state.bathroomStatus = "error";
-  }finally{
-    if(requestId === bathroomFetchId){
-      state.bathroomLoading = false;
-      bathroomFetchController = null;
-      renderBathrooms();
-    }
-  }
+  return bathroomLoadPromise;
 }
 
 function visibleBathrooms(){
-  if(!state.showBathrooms || !map || map.getZoom() < BATHROOM_MIN_ZOOM) return [];
+  if(!state.showBathrooms || !bathroomData || !map || map.getZoom() < BATHROOM_MIN_ZOOM) return [];
   const bounds = map.getBounds().pad(0.03);
-  return Array.from(bathroomById.values())
+  return bathroomData.toilets
     .filter(item=>bounds.contains([item.lat, item.lng]))
     .slice(0, BATHROOM_MARKER_LIMIT);
 }
@@ -1673,36 +1592,32 @@ function visibleBathrooms(){
 function renderBathrooms(updateFilters=true){
   if(!bathroomLayer || !map) return;
   bathroomLayer.clearLayers();
+  state.bathroomCount = 0;
   if(!state.showBathrooms){
-    state.bathroomCount = 0;
-    state.bathroomStatus = "idle";
-    state.bathroomLoading = false;
+    if(state.bathroomStatus !== "error") state.bathroomStatus = bathroomData ? "ready" : "idle";
     if(updateFilters) renderFilters();
     return;
   }
   if(map.getZoom() < BATHROOM_MIN_ZOOM){
-    state.bathroomCount = 0;
-    state.bathroomStatus = "zoom";
-    state.bathroomLoading = false;
+    state.bathroomStatus = bathroomData ? "ready" : "idle";
     if(updateFilters) renderFilters();
     return;
   }
-  const currentBounds = map.getBounds();
-  const fetchBounds = currentBounds.pad(0.35);
-  const cachedBounds = cachedBathroomBoundsContaining(currentBounds);
-  if(cachedBounds && (!bathroomFetchBounds || !bathroomFetchBounds.contains(currentBounds))){
-    bathroomFetchBounds = cachedBounds;
-    bathroomFailedKey = "";
-  }
-  const needsFetch = !bathroomFetchBounds || !bathroomFetchBounds.contains(currentBounds);
-  if(needsFetch && bathroomFailedKey !== bathroomBoundsKey(fetchBounds)){
-    queueBathroomFetch();
+  if(!bathroomData){
+    ensureBathroomsLoaded()
+      .then(()=>renderBathrooms(updateFilters))
+      .catch(()=>{
+        state.showBathrooms = false;
+        localStorage.setItem(BATHROOM_STORAGE_KEY, "0");
+        if(updateFilters) renderFilters();
+        setStatusKey("bathroomLoadFailed");
+      });
+    if(updateFilters) renderFilters();
+    return;
   }
   const items = visibleBathrooms();
   state.bathroomCount = items.length;
-  if(!state.bathroomLoading && state.bathroomStatus !== "error"){
-    state.bathroomStatus = "ready";
-  }
+  state.bathroomStatus = "ready";
   for(const item of items){
     const location = bathroomLocation(item);
     const marker = L.marker([location.lat, location.lng], {
@@ -1725,15 +1640,19 @@ function renderBathrooms(updateFilters=true){
 function ensureCyclePortsLoaded(){
   if(cyclePortData) return Promise.resolve(cyclePortData);
   if(!cyclePortLoadPromise){
-    cyclePortLoadPromise = fetch(`${CYCLE_PORT_DATA_URL}?v=${encodeURIComponent(APP_VERSION)}`)
-      .then(response=>{
-        if(!response.ok) throw new Error(`HTTP ${response.status}`);
-        return response.json();
-      })
+    cyclePortLoadPromise = fetchJson(CYCLE_PORT_DATA_URL)
       .then(data=>{
         const ports = Array.isArray(data.ports)
           ? data.ports.filter(port=>port && validCoord(Number(port.lat), Number(port.lng)))
           : [];
+        if(
+          !Array.isArray(data.ports) ||
+          ports.length !== data.ports.length ||
+          ports.length < 1500 ||
+          Number(data.counts && data.counts.total) !== ports.length
+        ){
+          throw new Error("incomplete or invalid cycle-port dataset");
+        }
         cyclePortData = {
           generatedAt:data.generatedAt || "",
           source:data.source || CYCLE_PORT_SOURCE_URL,
@@ -1776,7 +1695,7 @@ function renderCyclePorts(updateFilters=true){
   cyclePortLayer.clearLayers();
   if(!state.showCyclePorts){
     state.cyclePortCount = 0;
-    state.cyclePortStatus = "idle";
+    if(state.cyclePortStatus !== "error") state.cyclePortStatus = cyclePortData ? "ready" : "idle";
     if(updateFilters) renderFilters();
     return;
   }
@@ -1802,6 +1721,8 @@ function renderCyclePorts(updateFilters=true){
       .catch(()=>{
         state.cyclePortStatus = "error";
         state.cyclePortCount = 0;
+        state.showCyclePorts = false;
+        localStorage.setItem(CYCLE_PORT_STORAGE_KEY, "0");
         if(updateFilters) renderFilters();
         setStatusKey("cyclePortLoadFailedStatus");
       });
@@ -1857,29 +1778,11 @@ function convenienceFilterBrands(){
 }
 
 function ensureConvenienceStoresLoaded(){
-  if(convenienceData) return Promise.resolve(convenienceData);
-  if(!convenienceLoadPromise){
-    convenienceLoadPromise = fetch(CONVENIENCE_DATA_URL, {cache:"no-store"})
-      .then(response=>{
-        if(!response.ok) throw new Error(`HTTP ${response.status}`);
-        return response.json();
-      })
-      .then(data=>{
-        convenienceData = {
-          generatedAt:data.generatedAt || "",
-          areas:Array.isArray(data.areas) ? data.areas : [],
-          counts:data.counts || {total:0, byBrand:{}, byArea:{}},
-          stores:Array.isArray(data.stores) ? data.stores : []
-        };
-        convenienceLoadPromise = null;
-        return convenienceData;
-      })
-      .catch(error=>{
-        convenienceLoadPromise = null;
-        throw error;
-      });
-  }
-  return convenienceLoadPromise;
+  const loads = Array.from(state.convenienceBrands, brand=>{
+    const meta = CONVENIENCE_META[brand];
+    return meta ? loadStoreSource(brand, meta, {convenience:true}) : Promise.resolve(null);
+  });
+  return Promise.all(loads).then(()=>convenienceData);
 }
 
 function convenienceCandidates(){
@@ -1898,18 +1801,15 @@ function renderConvenienceStores(updateStatus=false){
     if(updateStatus) setStatusKey("visibleStatus", visibleLocations().length, (DATA.locations || []).length);
     return;
   }
-  if(!convenienceData){
+  const missing = Array.from(state.convenienceBrands).some(brand=>sourceState(CONVENIENCE_META[brand]).status !== "ready");
+  if(missing){
     setStatusKey("convenienceLoading");
     ensureConvenienceStoresLoaded()
       .then(()=>{
         renderFilters();
         renderConvenienceStores(updateStatus);
       })
-      .catch(()=>{
-        state.convenienceBrands.clear();
-        renderFilters();
-        setStatusKey("convenienceLoadFailed");
-      });
+      .catch(()=>setStatusKey("convenienceLoadFailed"));
     return;
   }
   const candidates = convenienceCandidates();
@@ -2048,23 +1948,30 @@ function metaLabel(meta, fallback){
 
 function bathroomElementCount(){
   if(!bathroomZoomAvailable()) return t("bathroomZoomPrompt", BATHROOM_MIN_ZOOM);
-  if(!state.showBathrooms) return "";
   if(state.bathroomStatus === "loading") return t("bathroomLoading");
   if(state.bathroomStatus === "error") return t("bathroomLoadFailed");
+  if(!state.showBathrooms) return "";
   return state.bathroomCount;
 }
 
 function cyclePortElementCount(){
   if(!cyclePortZoomAvailable()) return t("cyclePortZoomPrompt", CYCLE_PORT_MIN_ZOOM);
-  if(!state.showCyclePorts) return "";
   if(state.cyclePortStatus === "loading") return t("cyclePortLoading");
   if(state.cyclePortStatus === "error") return t("cyclePortLoadFailed");
+  if(!state.showCyclePorts) return "";
   return state.cyclePortCount;
 }
 
-function convenienceElementCount(count){
-  if(!convenienceZoomAvailable()) return t("convenienceZoomShort", CONVENIENCE_MIN_ZOOM);
+function sourceElementCount(status, count, {zoomMinimum=0}={}){
+  if(zoomMinimum && (!map || map.getZoom() < zoomMinimum)) return t("convenienceZoomShort", zoomMinimum);
+  if(status === "loading") return t("bathroomLoading");
+  if(status === "error") return t("bathroomLoadFailed");
   return Number.isFinite(count) && count > 0 ? count : "";
+}
+
+function convenienceElementCount(status, count){
+  if(!convenienceZoomAvailable()) return t("convenienceZoomShort", CONVENIENCE_MIN_ZOOM);
+  return sourceElementCount(status, count);
 }
 
 function convenienceZoomAvailable(){
@@ -2085,8 +1992,9 @@ function renderMapElementFilters(){
   mapElementFilters.appendChild(mapElementButton({
     code:state.lang === "ja" ? "駅" : "ST",
     name:t("majorStations"),
-    count:MAJOR_STATIONS.length,
+    count:sourceElementCount(majorStationStatus, MAJOR_STATIONS.length),
     checked:state.showMajorStations,
+    disabled:majorStationStatus === "error",
     dotClass:"station-dot",
     onChange:checked=>{
       state.showMajorStations = checked;
@@ -2096,11 +2004,13 @@ function renderMapElementFilters(){
   }));
   for(const [brand, meta] of Object.entries(BRAND_META)){
     const count = DATA.counts && DATA.counts.byBrand ? DATA.counts.byBrand[brand] || 0 : 0;
+    const loaded = sourceState(meta);
     mapElementFilters.appendChild(mapElementButton({
       code:meta.short,
       name:metaLabel(meta, brand),
-      count,
+      count:sourceElementCount(loaded.status, count),
       checked:state.brands.has(brand),
+      disabled:loaded.status === "error",
       dotClass:meta.className,
       onChange:checked=>{
         checked ? state.brands.add(brand) : state.brands.delete(brand);
@@ -2113,12 +2023,13 @@ function renderMapElementFilters(){
   for(const brand of convenienceFilterBrands()){
     const meta = CONVENIENCE_META[brand];
     const count = Number(convenienceCounts[brand]);
+    const loaded = sourceStates.get(meta.id) || {status:"idle"};
     mapElementFilters.appendChild(mapElementButton({
       code:meta.markerText || meta.short,
       name:metaLabel(meta, brand),
-      count:convenienceElementCount(count),
+      count:convenienceElementCount(loaded.status, count),
       checked:state.convenienceBrands.has(brand) && convenienceAvailable,
-      disabled:!convenienceAvailable,
+      disabled:!convenienceAvailable || loaded.status === "error",
       dotClass:meta.className,
       onChange:checked=>{
         checked ? state.convenienceBrands.add(brand) : state.convenienceBrands.delete(brand);
@@ -2132,18 +2043,11 @@ function renderMapElementFilters(){
     name:t("publicBathrooms"),
     count:bathroomElementCount(),
     checked:state.showBathrooms && bathroomAvailable,
-    disabled:!bathroomAvailable,
+    disabled:!bathroomAvailable || state.bathroomStatus === "error",
     dotClass:"bathroom-dot",
     onChange:checked=>{
       state.showBathrooms = checked;
       localStorage.setItem(BATHROOM_STORAGE_KEY, checked ? "1" : "0");
-      if(checked){
-        bathroomFailedKey = "";
-      }else{
-        if(bathroomFetchTimer) window.clearTimeout(bathroomFetchTimer);
-        if(bathroomFetchController) bathroomFetchController.abort();
-        bathroomFetchTimer = null;
-      }
       renderBathrooms();
     }
   }));
@@ -2153,7 +2057,7 @@ function renderMapElementFilters(){
     name:t("cyclePorts"),
     count:cyclePortElementCount(),
     checked:state.showCyclePorts && cyclePortsAvailable,
-    disabled:!cyclePortsAvailable,
+    disabled:!cyclePortsAvailable || state.cyclePortStatus === "error",
     dotClass:"cycle-port-dot",
     onChange:checked=>{
       state.showCyclePorts = checked;
@@ -2325,6 +2229,7 @@ function init(){
   renderCyclePorts(false);
   renderConvenienceStores(false);
   renderMarkers(!restoredRoute);
+  loadInitialLocationData();
   renderDrawnRoute();
   updateRoute(false);
   if(restoredRoute){

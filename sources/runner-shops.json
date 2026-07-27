@@ -1,0 +1,25 @@
+{
+  "source": {
+    "name": "Run Planner curated running shops",
+    "type": "curated"
+  },
+  "locations": [
+    {
+      "id": "runner-shop-runpoya",
+      "brand": "Running shop",
+      "short": "RUN",
+      "name": "RUNPOYA (ランポヤ)",
+      "address": "〒142-0053 東京都品川区中延1-4-17 サンパークビル103",
+      "lat": 35.6129214,
+      "lng": 139.7114592,
+      "area": "東京都",
+      "status": "",
+      "hours": "",
+      "note": "",
+      "phone": "",
+      "postalCode": "142-0053",
+      "url": "https://runpoya.com/shop-info/",
+      "directionsUrl": "https://www.google.com/maps/search/?api=1&query=35.6129214,139.7114592"
+    }
+  ]
+}
