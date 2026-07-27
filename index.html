@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<meta name="run-planner-version" content="2026.07.26.2">
+<meta name="run-planner-version" content="2026.07.27.2">
 <title>Run Planner Map</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <script data-goatcounter="https://runplanhacker.goatcounter.com/count"
@@ -87,6 +87,7 @@
   .convenience-marker{width:30px;height:22px;border-radius:999px;font-size:8px;border-width:2px;opacity:.96;}
   .runner-marker{width:32px;height:32px;border:2px solid #fff;border-radius:50%;background:#111f18;display:flex;align-items:center;justify-content:center;font-size:18px;line-height:1;box-shadow:0 4px 14px rgba(0,0,0,.32);}
   .bathroom-marker{width:30px;height:30px;border:2px solid #fff;border-radius:50%;background:#0f766e;display:flex;align-items:center;justify-content:center;font-size:19px;line-height:1;box-shadow:0 4px 14px rgba(0,0,0,.32);}
+  .cycle-port-marker{width:30px;height:30px;border:2px solid #fff;border-radius:50%;background:#d93636;display:flex;align-items:center;justify-content:center;font-size:18px;line-height:1;box-shadow:0 4px 14px rgba(0,0,0,.32);}
   .brand-af{background:#7b1fa2;}
   .brand-wg{background:#006323;}
   .brand-cr{background:#d97706;}
@@ -95,6 +96,7 @@
   .brand-seven{background:#e23d28;}
   .station-dot{background:#111;border-color:#111;}
   .bathroom-dot{background:#0f766e;border-color:#0f766e;}
+  .cycle-port-dot{background:#d93636;border-color:#d93636;}
   .major-station-icon{background:transparent;border:0;pointer-events:none;}
   .major-station-label{display:inline-block;max-width:145px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;border-radius:4px;background:rgba(10,10,10,.88);color:#fff;padding:3px 7px;font-size:14px;font-weight:400;line-height:1.2;box-shadow:0 2px 7px rgba(0,0,0,.24);pointer-events:none;}
   .popup{min-width:210px;max-width:280px;border-radius:18px;}
@@ -226,7 +228,7 @@
 <script>
 const DATA = window.RUN_PLANNER_DATA || {locations:[], areas:[], counts:{byBrand:{}, byArea:{}}};
 const MAJOR_STATIONS = window.RUN_PLANNER_MAJOR_STATIONS || [];
-const APP_VERSION = "2026.07.27.1";
+const APP_VERSION = "2026.07.27.2";
 const DEFAULT_CENTER = {lat:35.685175,lng:139.752800};
 const GSI_TILE_URL = "https://cyberjapandata.gsi.go.jp/xyz/std/{z}/{x}/{y}.png";
 const GSI_ATTRIBUTION = '<a href="https://maps.gsi.go.jp/development/ichiran.html">地理院タイル</a>';
@@ -244,6 +246,13 @@ const BATHROOM_ENDPOINT = "https://overpass-api.de/api/interpreter";
 const BATHROOM_ATTRIBUTION = 'Bathroom data &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap contributors</a>';
 const BATHROOM_EXCLUDED_ACCESS = new Set(["private", "customers", "no"]);
 const BATHROOM_CACHE_TAGS = ["name", "name:ja", "name:en", "access", "toilets:access", "opening_hours", "fee", "wheelchair", "changing_table", "unisex", "male", "female"];
+const CYCLE_PORT_DATA_URL = "./docomo-cycle-ports.json";
+const CYCLE_PORT_SOURCE_URL = "https://www.google.com/maps/d/viewer?mid=1L2l1EnQJhCNlm_Xxkp9RTjIj68Q";
+const CYCLE_PORT_STORAGE_KEY = "runPlannerDocomoCyclePorts";
+const CYCLE_PORT_EMOJI = "🚲";
+const CYCLE_PORT_MIN_ZOOM = 15;
+const CYCLE_PORT_MARKER_LIMIT = 500;
+const CYCLE_PORT_ATTRIBUTION = `Cycle-port source: <a href="${CYCLE_PORT_SOURCE_URL}">Tokyo Bike Share Station Map</a>`;
 const BRAND_META = {
   "Anytime Fitness": {short:"AF", className:"brand-af", labels:{en:"Anytime Fitness", ja:"エニタイムフィットネス"}},
   "WithGreen": {short:"WG", className:"brand-wg", labels:{en:"WithGreen", ja:"ウィズグリーン"}},
@@ -298,6 +307,14 @@ const I18N = {
     bathroomLoading:"loading",
     bathroomLoadFailed:"failed",
     bathroomZoomPrompt:zoom=>`zoom ${zoom}+`,
+    cyclePorts:"Docomo cycle ports",
+    cyclePort:"Docomo cycle port",
+    cyclePortLoading:"loading",
+    cyclePortLoadFailed:"failed",
+    cyclePortZoomPrompt:zoom=>`zoom ${zoom}+`,
+    cyclePortLoadingStatus:"Loading Docomo cycle ports",
+    cyclePortLoadFailedStatus:"Could not load Docomo cycle ports",
+    cyclePortVisibleStatus:(visible,total)=>`${visible} cycle ports visible / ${total} total`,
     openingHours:"Hours",
     access:"Access",
     fee:"Fee",
@@ -391,6 +408,14 @@ const I18N = {
     bathroomLoading:"読込中",
     bathroomLoadFailed:"失敗",
     bathroomZoomPrompt:zoom=>`ズーム${zoom}+`,
+    cyclePorts:"ドコモ・バイクシェア ポート",
+    cyclePort:"ドコモ・バイクシェア ポート",
+    cyclePortLoading:"読込中",
+    cyclePortLoadFailed:"失敗",
+    cyclePortZoomPrompt:zoom=>`ズーム${zoom}+`,
+    cyclePortLoadingStatus:"ドコモ・バイクシェアのポートを読み込み中",
+    cyclePortLoadFailedStatus:"ドコモ・バイクシェアのポートを読み込めませんでした",
+    cyclePortVisibleStatus:(visible,total)=>`${visible}件のポートを表示 / 全${total}件`,
     openingHours:"利用時間",
     access:"アクセス",
     fee:"料金",
@@ -471,6 +496,9 @@ const state = {
   bathroomStatus:"idle",
   bathroomCount:0,
   bathroomLoading:false,
+  showCyclePorts:localStorage.getItem(CYCLE_PORT_STORAGE_KEY) === "1",
+  cyclePortStatus:"idle",
+  cyclePortCount:0,
   lang:localStorage.getItem("runPlannerLang") === "ja" ? "ja" : "en",
   routeMode:"empty",
   routePoints:[],
@@ -488,7 +516,9 @@ let bathroomFailedKey = "";
 let bathroomCacheLoaded = false;
 let bathroomCacheEntries = [];
 const bathroomById = new Map();
-let map, centerMarker, routeCircle, markerLayer, convenienceLayer, bathroomLayer, majorStationLayer, drawnRouteLine, routePointLayer, routeDistancePopupTimer, routeVisualOverlay, routeVisualPath, routeVisualFrame, bearingResetControl, bearingResetButton;
+let cyclePortData = null;
+let cyclePortLoadPromise = null;
+let map, centerMarker, routeCircle, markerLayer, convenienceLayer, bathroomLayer, cyclePortLayer, majorStationLayer, drawnRouteLine, routePointLayer, routeDistancePopupTimer, routeVisualOverlay, routeVisualPath, routeVisualFrame, bearingResetControl, bearingResetButton;
 
 const locationInput = document.getElementById("locationInput");
 const radiusInput = document.getElementById("radiusInput");
@@ -1320,6 +1350,16 @@ function bathroomIcon(){
   });
 }
 
+function cyclePortIcon(){
+  return L.divIcon({
+    className:"",
+    html:`<div class="cycle-port-marker" aria-hidden="true">${CYCLE_PORT_EMOJI}</div>`,
+    iconSize:[30,30],
+    iconAnchor:[15,15],
+    popupAnchor:[0,-15]
+  });
+}
+
 function bathroomTagValue(value){
   const text = String(value || "").trim();
   const normalized = text.toLowerCase();
@@ -1682,6 +1722,115 @@ function renderBathrooms(updateFilters=true){
   if(updateFilters) renderFilters();
 }
 
+function ensureCyclePortsLoaded(){
+  if(cyclePortData) return Promise.resolve(cyclePortData);
+  if(!cyclePortLoadPromise){
+    cyclePortLoadPromise = fetch(`${CYCLE_PORT_DATA_URL}?v=${encodeURIComponent(APP_VERSION)}`)
+      .then(response=>{
+        if(!response.ok) throw new Error(`HTTP ${response.status}`);
+        return response.json();
+      })
+      .then(data=>{
+        const ports = Array.isArray(data.ports)
+          ? data.ports.filter(port=>port && validCoord(Number(port.lat), Number(port.lng)))
+          : [];
+        cyclePortData = {
+          generatedAt:data.generatedAt || "",
+          source:data.source || CYCLE_PORT_SOURCE_URL,
+          counts:data.counts || {total:ports.length},
+          ports
+        };
+        cyclePortLoadPromise = null;
+        return cyclePortData;
+      })
+      .catch(error=>{
+        cyclePortLoadPromise = null;
+        throw error;
+      });
+  }
+  return cyclePortLoadPromise;
+}
+
+function cyclePortLocation(item){
+  const lat = Number(item.lat);
+  const lng = Number(item.lng);
+  return {
+    id:item.id,
+    name:item.name || t("cyclePort"),
+    lat,
+    lng,
+    mapUrl:`https://www.google.com/maps/search/?api=1&query=${lat.toFixed(7)},${lng.toFixed(7)}`,
+    url:(cyclePortData && cyclePortData.source) || CYCLE_PORT_SOURCE_URL
+  };
+}
+
+function visibleCyclePorts(){
+  if(!state.showCyclePorts || !cyclePortData || !map || map.getZoom() < CYCLE_PORT_MIN_ZOOM) return [];
+  const bounds = map.getBounds().pad(0.08);
+  return cyclePortData.ports
+    .filter(port=>bounds.contains([port.lat, port.lng]))
+    .slice(0, CYCLE_PORT_MARKER_LIMIT);
+}
+
+function renderCyclePorts(updateFilters=true){
+  if(!cyclePortLayer || !map) return;
+  cyclePortLayer.clearLayers();
+  if(!state.showCyclePorts){
+    state.cyclePortCount = 0;
+    state.cyclePortStatus = "idle";
+    if(updateFilters) renderFilters();
+    return;
+  }
+  if(map.getZoom() < CYCLE_PORT_MIN_ZOOM){
+    state.cyclePortCount = 0;
+    state.cyclePortStatus = "zoom";
+    if(updateFilters) renderFilters();
+    return;
+  }
+  if(!cyclePortData){
+    if(state.cyclePortStatus === "error"){
+      if(updateFilters) renderFilters();
+      return;
+    }
+    state.cyclePortStatus = "loading";
+    if(updateFilters) renderFilters();
+    setStatusKey("cyclePortLoadingStatus");
+    ensureCyclePortsLoaded()
+      .then(()=>{
+        state.cyclePortStatus = "ready";
+        renderCyclePorts(updateFilters);
+      })
+      .catch(()=>{
+        state.cyclePortStatus = "error";
+        state.cyclePortCount = 0;
+        if(updateFilters) renderFilters();
+        setStatusKey("cyclePortLoadFailedStatus");
+      });
+    return;
+  }
+  const ports = visibleCyclePorts();
+  state.cyclePortCount = ports.length;
+  state.cyclePortStatus = "ready";
+  for(const item of ports){
+    const location = cyclePortLocation(item);
+    const marker = L.marker([location.lat, location.lng], {
+      icon:cyclePortIcon(),
+      title:location.name,
+      zIndexOffset:-400
+    });
+    marker.on("click", event=>{
+      if(addLocationWaypoint(location)){
+        if(event.originalEvent) L.DomEvent.stop(event.originalEvent);
+        return;
+      }
+      marker.bindPopup(popupElement(location)).openPopup();
+    });
+    marker.addTo(cyclePortLayer);
+  }
+  if(updateFilters) renderFilters();
+  setStatusKey("cyclePortVisibleStatus", ports.length, cyclePortData.ports.length);
+}
+
 function stationDisplayName(station){
   if(state.lang === "ja") return station.nameJa || station.name;
   return station.nameEn || station.name;
@@ -1906,6 +2055,14 @@ function bathroomElementCount(){
   return state.bathroomCount;
 }
 
+function cyclePortElementCount(){
+  if(!cyclePortZoomAvailable()) return t("cyclePortZoomPrompt", CYCLE_PORT_MIN_ZOOM);
+  if(!state.showCyclePorts) return "";
+  if(state.cyclePortStatus === "loading") return t("cyclePortLoading");
+  if(state.cyclePortStatus === "error") return t("cyclePortLoadFailed");
+  return state.cyclePortCount;
+}
+
 function convenienceElementCount(count){
   if(!convenienceZoomAvailable()) return t("convenienceZoomShort", CONVENIENCE_MIN_ZOOM);
   return Number.isFinite(count) && count > 0 ? count : "";
@@ -1917,6 +2074,10 @@ function convenienceZoomAvailable(){
 
 function bathroomZoomAvailable(){
   return Boolean(map && map.getZoom() >= BATHROOM_MIN_ZOOM);
+}
+
+function cyclePortZoomAvailable(){
+  return Boolean(map && map.getZoom() >= CYCLE_PORT_MIN_ZOOM);
 }
 
 function renderMapElementFilters(){
@@ -1985,6 +2146,21 @@ function renderMapElementFilters(){
         bathroomFetchTimer = null;
       }
       renderBathrooms();
+    }
+  }));
+  const cyclePortsAvailable = cyclePortZoomAvailable();
+  mapElementFilters.appendChild(mapElementButton({
+    code:CYCLE_PORT_EMOJI,
+    name:t("cyclePorts"),
+    count:cyclePortElementCount(),
+    checked:state.showCyclePorts && cyclePortsAvailable,
+    disabled:!cyclePortsAvailable,
+    dotClass:"cycle-port-dot",
+    onChange:checked=>{
+      state.showCyclePorts = checked;
+      state.cyclePortStatus = "idle";
+      localStorage.setItem(CYCLE_PORT_STORAGE_KEY, checked ? "1" : "0");
+      renderCyclePorts();
     }
   }));
 }
@@ -2081,6 +2257,7 @@ function applyLanguage(){
   renderMajorStations();
   renderConvenienceStores(false);
   renderBathrooms(false);
+  renderCyclePorts(false);
   updateRoute(false);
 }
 
@@ -2105,11 +2282,13 @@ function init(){
   addRouteVisualOverlay();
   addBearingResetControl();
   if(map.attributionControl) map.attributionControl.addAttribution(BATHROOM_ATTRIBUTION);
+  if(map.attributionControl) map.attributionControl.addAttribution(CYCLE_PORT_ATTRIBUTION);
   const majorStationPane = map.createPane("majorStationPane");
   majorStationPane.style.zIndex = "680";
   majorStationPane.style.pointerEvents = "none";
   majorStationLayer = L.layerGroup().addTo(map);
   bathroomLayer = L.layerGroup().addTo(map);
+  cyclePortLayer = L.layerGroup().addTo(map);
   convenienceLayer = L.layerGroup().addTo(map);
   markerLayer = L.layerGroup().addTo(map);
   routeCircle = L.circle([state.lat, state.lng], {radius:state.radiusKm * 1000, color:"#1f8fff", weight:3, dashArray:"8 9", fillColor:"#22c55e", fillOpacity:.12}).addTo(map);
@@ -2136,6 +2315,7 @@ function init(){
   map.on("zoomend moveend", ()=>{
     renderMajorStations();
     renderBathrooms();
+    renderCyclePorts(state.showCyclePorts);
     renderConvenienceStores(state.convenienceBrands.size > 0);
   });
   applyLanguage();
@@ -2143,6 +2323,7 @@ function init(){
   setDrawerOpen(true);
   renderMajorStations();
   renderBathrooms();
+  renderCyclePorts(false);
   renderConvenienceStores(false);
   renderMarkers(!restoredRoute);
   renderDrawnRoute();
