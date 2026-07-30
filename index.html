@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<meta name="run-planner-version" content="2026.07.30.1">
+<meta name="run-planner-version" content="2026.07.30.2">
 <title>Run Planner Map</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <script data-goatcounter="https://runplanhacker.goatcounter.com/count"
@@ -82,7 +82,9 @@
   .map-element-name{min-width:0;overflow-wrap:anywhere;}
   .map-element-count{font-size:11px;font-weight:800;color:inherit;opacity:.72;white-space:nowrap;}
   .label-hint{text-transform:none;letter-spacing:0;font-size:11px;font-weight:700;color:var(--muted);}
-  .status{border-top:1px solid #e5eee8;padding-top:8px;font-size:12px;color:var(--muted);min-height:26px;}
+  .status-line{display:flex;align-items:baseline;justify-content:space-between;gap:10px;border-top:1px solid #e5eee8;padding-top:8px;min-height:26px;font-size:12px;}
+  .status{min-width:0;color:var(--muted);}
+  .zoom-indicator{flex:none;color:var(--ink);font-weight:800;white-space:nowrap;}
   .marker{width:24px;height:24px;border:2px solid #fff;border-radius:50%;color:#fff;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:900;box-shadow:0 3px 10px rgba(0,0,0,.28);}
   .convenience-marker{width:30px;height:22px;border-radius:999px;font-size:8px;border-width:2px;opacity:.96;}
   .runner-marker{width:32px;height:32px;border:2px solid #fff;border-radius:50%;background:#111f18;display:flex;align-items:center;justify-content:center;font-size:18px;line-height:1;box-shadow:0 4px 14px rgba(0,0,0,.32);}
@@ -208,7 +210,10 @@
           </div>
           <p class="route-footnote" id="routeDrawFootnote">Routes are straight-line only and do not snap to roads.</p>
         </div>
-        <div class="status" id="status"></div>
+        <div class="status-line">
+          <div class="status" id="status"></div>
+          <span class="zoom-indicator" id="zoomIndicator"></span>
+        </div>
       </div>
       <div class="pane-block filter-panel">
         <div class="control">
@@ -235,7 +240,7 @@ const TARGET_AREAS = ["東京都", "神奈川県", "埼玉県", "千葉県", "�
 const DATA = {locations:[], areas:TARGET_AREAS, counts:{total:0, byBrand:{}, byArea:{}}};
 let MAJOR_STATIONS = [];
 let RUNNER_LOCATIONS = [];
-const APP_VERSION = "2026.07.30.1";
+const APP_VERSION = "2026.07.30.2";
 const DEFAULT_CENTER = {lat:35.685175,lng:139.752800};
 const GSI_TILE_URL = "https://cyberjapandata.gsi.go.jp/xyz/std/{z}/{x}/{y}.png";
 const GSI_ATTRIBUTION = '<a href="https://maps.gsi.go.jp/development/ichiran.html">地理院タイル</a>';
@@ -385,7 +390,8 @@ const I18N = {
     gpxExported:"GPX exported",
     gpxUnavailable:"Select Done before exporting GPX.",
     resetBearing:"Reset map north",
-    openSiteQr:"Open Run Planner"
+    openSiteQr:"Open Run Planner",
+    zoomLevel:zoom=>`Zoom ${zoom}`
   },
   ja: {
     docTitle:"ランニングプランナーマップ",
@@ -492,14 +498,15 @@ const I18N = {
     gpxExported:"GPXを出力しました",
     gpxUnavailable:"GPX出力の前に完了を選択してください。",
     resetBearing:"地図を北向きに戻す",
-    openSiteQr:"ランニングプランナーを開く"
+    openSiteQr:"ランニングプランナーを開く",
+    zoomLevel:zoom=>`ズーム ${zoom}`
   }
 };
 const state = {
   lat:DEFAULT_CENTER.lat,
   lng:DEFAULT_CENTER.lng,
   radiusKm:2,
-  brands:new Set(Object.keys(BRAND_META)),
+  brands:new Set(["Anytime Fitness"]),
   convenienceBrands:new Set(),
   areas:new Set(TARGET_AREAS),
   showMajorStations:localStorage.getItem("runPlannerMajorStations") !== "0",
@@ -542,6 +549,7 @@ const drawer = document.getElementById("drawer");
 const drawerToggle = document.getElementById("drawerToggle");
 const drawerToggleText = document.getElementById("drawerToggleText");
 const statusEl = document.getElementById("status");
+const zoomIndicatorEl = document.getElementById("zoomIndicator");
 const loopStatLabelEl = document.getElementById("loopStatLabel");
 const timeMetric = document.getElementById("timeMetric");
 const routeDrawBtn = document.getElementById("routeDrawBtn");
@@ -567,6 +575,12 @@ function setStatusText(text){
   state.lastStatusKey = "";
   state.lastStatusArgs = [];
   statusEl.textContent = text || "";
+}
+
+function updateZoomIndicator(){
+  if(!zoomIndicatorEl || !map) return;
+  const zoom = map.getZoom();
+  zoomIndicatorEl.textContent = t("zoomLevel", Number.isInteger(zoom) ? zoom : zoom.toFixed(1));
 }
 
 function formatDate(value){
@@ -735,9 +749,8 @@ function loadRunnerShops(){
 }
 
 function loadInitialLocationData(){
-  for(const [brand, meta] of Object.entries(BRAND_META)){
-    loadStoreSource(brand, meta);
-  }
+  const primaryLoads = Object.entries(BRAND_META).map(([brand, meta])=>loadStoreSource(brand, meta));
+  Promise.all(primaryLoads).then(()=>renderMarkers(true));
   loadMajorStations();
   loadRunnerShops();
 }
@@ -2376,6 +2389,7 @@ function applyLanguage(){
   document.getElementById("areasLabel").textContent = t("areasLabel");
   updateBearingResetControl();
   updateSiteQrControl();
+  updateZoomIndicator();
   document.querySelector(".route-draw-controls").setAttribute("aria-label", t("routeDrawLabel"));
   document.getElementById("routeDrawFootnote").textContent = t("routeDrawFootnote");
   renderRouteControls();
@@ -2446,6 +2460,7 @@ function init(){
     }
   });
   map.on("zoomend", scheduleRainRadarRedraw);
+  map.on("zoom", updateZoomIndicator);
   map.on("zoomend moveend", ()=>{
     renderMajorStations();
     renderBathrooms();
