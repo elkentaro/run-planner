@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<meta name="run-planner-version" content="2026.07.30.6">
+<meta name="run-planner-version" content="2026.07.31.1">
 <title>Run Planner Map</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <script data-goatcounter="https://runplanhacker.goatcounter.com/count"
@@ -91,6 +91,8 @@
   .bathroom-marker{width:30px;height:30px;border:2px solid #fff;border-radius:50%;background:#0f766e;display:flex;align-items:center;justify-content:center;font-size:19px;line-height:1;box-shadow:0 4px 14px rgba(0,0,0,.32);}
   .cycle-port-marker{width:30px;height:30px;border:3px solid #ff2020;border-radius:50%;background:#fff;display:flex;align-items:center;justify-content:center;font-family:"Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif;font-size:18px;line-height:1;box-shadow:0 4px 14px rgba(0,0,0,.32);}
   .cycle-port-marker > span{display:block;line-height:1;transform:translateY(-1px);}
+  .hello-cycle-marker{width:30px;height:30px;border:3px solid #f1c900;border-radius:50%;background:#fff;display:flex;align-items:center;justify-content:center;font-family:"Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif;font-size:18px;line-height:1;box-shadow:0 4px 14px rgba(0,0,0,.32);}
+  .hello-cycle-marker > span{display:block;line-height:1;transform:translateY(-1px);}
   .brand-af{background:#7b1fa2;}
   .brand-wg{background:#006323;}
   .brand-cr{background:#d97706;}
@@ -100,6 +102,7 @@
   .station-dot{background:#111;border-color:#111;}
   .bathroom-dot{background:#0f766e;border-color:#0f766e;}
   .cycle-port-dot{background:#ff2020;border-color:#ff2020;}
+  .hello-cycle-dot{background:#f1c900;border-color:#111;}
   .rain-radar-dot{background:linear-gradient(135deg,#88ddee,#00a3e0,#ffee00,#c10000);border-color:#fff;}
   .major-station-icon{background:transparent;border:0;pointer-events:none;}
   .major-station-label{display:inline-block;max-width:145px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;border-radius:4px;background:rgba(10,10,10,.88);color:#fff;padding:3px 7px;font-size:14px;font-weight:400;line-height:1.2;box-shadow:0 2px 7px rgba(0,0,0,.24);pointer-events:none;}
@@ -258,7 +261,7 @@ const TARGET_AREAS = ["東京都", "神奈川県", "埼玉県", "千葉県", "�
 const DATA = {locations:[], areas:TARGET_AREAS, counts:{total:0, byBrand:{}, byArea:{}}};
 let MAJOR_STATIONS = [];
 let RUNNER_LOCATIONS = [];
-const APP_VERSION = "2026.07.30.6";
+const APP_VERSION = "2026.07.31.1";
 const DEFAULT_CENTER = {lat:35.685175,lng:139.752800};
 const GSI_TILE_URL = "https://cyberjapandata.gsi.go.jp/xyz/std/{z}/{x}/{y}.png";
 const GSI_ATTRIBUTION = '<a href="https://maps.gsi.go.jp/development/ichiran.html">地理院タイル</a>';
@@ -284,6 +287,14 @@ const CYCLE_PORT_EMOJI = "🚲";
 const CYCLE_PORT_MIN_ZOOM = 15;
 const CYCLE_PORT_MARKER_LIMIT = 500;
 const CYCLE_PORT_ATTRIBUTION = `Cycle-port source: <a href="${CYCLE_PORT_SOURCE_URL}">Tokyo Bike Share Station Map</a>`;
+const HELLO_CYCLE_DATA_URL = "./data/hello-cycling.json";
+const HELLO_CYCLE_SOURCE_URL = "https://api-public.odpt.org/api/v4/gbfs/hellocycling/station_information.json";
+const HELLO_CYCLE_CATALOG_URL = "https://ckan.odpt.org/en/dataset/c_bikeshare_gbfs-openstreet";
+const HELLO_CYCLE_STORAGE_KEY = "runPlannerHelloCycling";
+const HELLO_CYCLE_EMOJI = "🚲";
+const HELLO_CYCLE_MIN_ZOOM = 15;
+const HELLO_CYCLE_MARKER_LIMIT = 500;
+const HELLO_CYCLE_ATTRIBUTION = `HELLO CYCLING data: <a href="${HELLO_CYCLE_CATALOG_URL}">OpenStreet Corp. / ODPT</a>`;
 const BRAND_META = {
   "Anytime Fitness": {id:"anytime-fitness", url:"./data/anytime-fitness.json", minimum:500, short:"AF", className:"brand-af", labels:{en:"Anytime Fitness", ja:"エニタイムフィットネス"}},
   "WithGreen": {id:"withgreen", url:"./data/withgreen.json", minimum:25, short:"WG", className:"brand-wg", labels:{en:"WithGreen", ja:"ウィズグリーン"}},
@@ -352,6 +363,16 @@ const I18N = {
     cyclePortLoadingStatus:"Loading Docomo cycle ports",
     cyclePortLoadFailedStatus:"Could not load Docomo cycle ports",
     cyclePortVisibleStatus:(visible,total)=>`${visible} cycle ports visible / ${total} total`,
+    helloCyclePorts:"HELLO CYCLING ports",
+    helloCyclePort:"HELLO CYCLING port",
+    helloCycleLoading:"loading",
+    helloCycleLoadFailed:"failed",
+    helloCycleZoomPrompt:zoom=>`zoom ${zoom}+`,
+    helloCycleZoomStatus:zoom=>`Zoom to level ${zoom} or closer to show HELLO CYCLING ports.`,
+    helloCycleLoadingStatus:"Loading HELLO CYCLING ports",
+    helloCycleLoadFailedStatus:"Could not load HELLO CYCLING ports",
+    helloCycleVisibleStatus:(visible,total)=>`${visible} HELLO CYCLING ports visible / ${total} total`,
+    cyclePortCapacity:value=>`Capacity: ${value}`,
     openingHours:"Hours",
     access:"Access",
     fee:"Fee",
@@ -465,6 +486,16 @@ const I18N = {
     cyclePortLoadingStatus:"ドコモ・バイクシェアのポートを読み込み中",
     cyclePortLoadFailedStatus:"ドコモ・バイクシェアのポートを読み込めませんでした",
     cyclePortVisibleStatus:(visible,total)=>`${visible}件のポートを表示 / 全${total}件`,
+    helloCyclePorts:"HELLO CYCLING ポート",
+    helloCyclePort:"HELLO CYCLING ポート",
+    helloCycleLoading:"読込中",
+    helloCycleLoadFailed:"失敗",
+    helloCycleZoomPrompt:zoom=>`ズーム${zoom}+`,
+    helloCycleZoomStatus:zoom=>`ズーム${zoom}以上でHELLO CYCLINGのポートを表示します。`,
+    helloCycleLoadingStatus:"HELLO CYCLINGのポートを読み込み中",
+    helloCycleLoadFailedStatus:"HELLO CYCLINGのポートを読み込めませんでした",
+    helloCycleVisibleStatus:(visible,total)=>`${visible}件のHELLO CYCLINGポートを表示 / 全${total}件`,
+    cyclePortCapacity:value=>`駐輪可能台数: ${value}`,
     openingHours:"利用時間",
     access:"アクセス",
     fee:"料金",
@@ -553,6 +584,9 @@ const state = {
   showCyclePorts:localStorage.getItem(CYCLE_PORT_STORAGE_KEY) === "1",
   cyclePortStatus:"idle",
   cyclePortCount:0,
+  showHelloCyclePorts:localStorage.getItem(HELLO_CYCLE_STORAGE_KEY) === "1",
+  helloCycleStatus:"idle",
+  helloCycleCount:0,
   lang:localStorage.getItem("runPlannerLang") === "ja" ? "ja" : "en",
   routeMode:"empty",
   routePoints:[],
@@ -567,6 +601,8 @@ let bathroomData = null;
 let bathroomLoadPromise = null;
 let cyclePortData = null;
 let cyclePortLoadPromise = null;
+let helloCycleData = null;
+let helloCycleLoadPromise = null;
 let majorStationStatus = "loading";
 let rainRadarLayer = null;
 let rainRadarPendingLayer = null;
@@ -580,7 +616,7 @@ let mountainPeakData = null;
 let mountainPeakLoadPromise = null;
 let kanagawaStationStatus = "loading";
 let journeyPreviousFilters = null;
-let map, centerMarker, routeCircle, markerLayer, convenienceLayer, bathroomLayer, cyclePortLayer, majorStationLayer, mountainPeakLayer, drawnRouteLine, routePointLayer, routeDistancePopupTimer, routeVisualOverlay, routeVisualPath, routeVisualFrame, bearingResetControl, bearingResetButton, siteQrControl, siteQrLink, journeyControl, journeyControlButton, stationCanvasRenderer, bathroomCanvasRenderer;
+let map, centerMarker, routeCircle, markerLayer, convenienceLayer, bathroomLayer, cyclePortLayer, helloCycleLayer, majorStationLayer, mountainPeakLayer, drawnRouteLine, routePointLayer, routeDistancePopupTimer, routeVisualOverlay, routeVisualPath, routeVisualFrame, bearingResetControl, bearingResetButton, siteQrControl, siteQrLink, journeyControl, journeyControlButton, stationCanvasRenderer, bathroomCanvasRenderer;
 
 const locationInput = document.getElementById("locationInput");
 const radiusInput = document.getElementById("radiusInput");
@@ -990,6 +1026,7 @@ function setJourneyMode(enabled, {persist=true, announce=true}={}){
       convenienceBrands:new Set(state.convenienceBrands),
       showBathrooms:state.showBathrooms,
       showCyclePorts:state.showCyclePorts,
+      showHelloCyclePorts:state.showHelloCyclePorts,
       showRainRadar:state.showRainRadar,
       showMajorStations:state.showMajorStations
     };
@@ -997,6 +1034,7 @@ function setJourneyMode(enabled, {persist=true, announce=true}={}){
     state.brands.clear();
     state.convenienceBrands.clear();
     state.showCyclePorts = false;
+    state.showHelloCyclePorts = false;
     setRainRadarEnabled(false, {persist:false});
   }else{
     state.journeyMode = false;
@@ -1005,6 +1043,7 @@ function setJourneyMode(enabled, {persist=true, announce=true}={}){
       state.convenienceBrands = new Set(journeyPreviousFilters.convenienceBrands);
       state.showBathrooms = journeyPreviousFilters.showBathrooms;
       state.showCyclePorts = journeyPreviousFilters.showCyclePorts;
+      state.showHelloCyclePorts = journeyPreviousFilters.showHelloCyclePorts;
       state.showMajorStations = journeyPreviousFilters.showMajorStations;
       setRainRadarEnabled(journeyPreviousFilters.showRainRadar, {persist:false});
     }
@@ -1015,6 +1054,7 @@ function setJourneyMode(enabled, {persist=true, announce=true}={}){
   renderMarkers(false);
   renderConvenienceStores(false);
   renderCyclePorts(false);
+  renderHelloCyclePorts(false);
   renderMajorStations();
   renderBathrooms();
   renderMountainPeaks();
@@ -1739,6 +1779,16 @@ function cyclePortIcon(){
   });
 }
 
+function helloCyclePortIcon(){
+  return L.divIcon({
+    className:"",
+    html:`<div class="hello-cycle-marker" aria-hidden="true"><span>${HELLO_CYCLE_EMOJI}</span></div>`,
+    iconSize:[30,30],
+    iconAnchor:[15,15],
+    popupAnchor:[0,-15]
+  });
+}
+
 function mountainPeakIcon(){
   return L.divIcon({
     className:"mountain-peak-icon",
@@ -2074,6 +2124,120 @@ function renderCyclePorts(updateFilters=true){
   }
   if(updateFilters) renderFilters();
   setStatusKey("cyclePortVisibleStatus", ports.length, cyclePortData.ports.length);
+}
+
+function ensureHelloCyclePortsLoaded(){
+  if(helloCycleData) return Promise.resolve(helloCycleData);
+  if(!helloCycleLoadPromise){
+    helloCycleLoadPromise = fetchJson(HELLO_CYCLE_DATA_URL)
+      .then(data=>{
+        const ports = Array.isArray(data.ports)
+          ? data.ports.filter(port=>port && validCoord(Number(port.lat), Number(port.lng)))
+          : [];
+        if(
+          !Array.isArray(data.ports) ||
+          ports.length !== data.ports.length ||
+          ports.length < 9500 ||
+          Number(data.counts && data.counts.total) !== ports.length
+        ){
+          throw new Error("incomplete or invalid HELLO CYCLING dataset");
+        }
+        helloCycleData = {
+          generatedAt:data.generatedAt || "",
+          source:data.source || {url:HELLO_CYCLE_SOURCE_URL},
+          counts:data.counts || {total:ports.length},
+          ports
+        };
+        return helloCycleData;
+      })
+      .finally(()=>{ helloCycleLoadPromise = null; });
+  }
+  return helloCycleLoadPromise;
+}
+
+function helloCyclePortLocation(item){
+  const lat = Number(item.lat);
+  const lng = Number(item.lng);
+  return {
+    id:item.id,
+    name:item.name || t("helloCyclePort"),
+    lat,
+    lng,
+    address:item.address || "",
+    note:Number(item.capacity) > 0 ? t("cyclePortCapacity", item.capacity) : "",
+    mapUrl:`https://www.google.com/maps/search/?api=1&query=${lat.toFixed(7)},${lng.toFixed(7)}`,
+    homepageUrl:item.serviceUrl || ""
+  };
+}
+
+function visibleHelloCyclePorts(){
+  if(!state.showHelloCyclePorts || !helloCycleData || !map || map.getZoom() < HELLO_CYCLE_MIN_ZOOM) return [];
+  const bounds = map.getBounds().pad(0.08);
+  return helloCycleData.ports
+    .filter(port=>bounds.contains([port.lat, port.lng]))
+    .slice(0, HELLO_CYCLE_MARKER_LIMIT);
+}
+
+function renderHelloCyclePorts(updateFilters=true){
+  if(!helloCycleLayer || !map) return;
+  helloCycleLayer.clearLayers();
+  if(!state.showHelloCyclePorts){
+    state.helloCycleCount = 0;
+    if(state.helloCycleStatus !== "error") state.helloCycleStatus = helloCycleData ? "ready" : "idle";
+    if(updateFilters) renderFilters();
+    return;
+  }
+  if(map.getZoom() < HELLO_CYCLE_MIN_ZOOM){
+    state.helloCycleCount = 0;
+    state.helloCycleStatus = "zoom";
+    if(updateFilters) renderFilters();
+    if(updateFilters) setStatusKey("helloCycleZoomStatus", HELLO_CYCLE_MIN_ZOOM);
+    return;
+  }
+  if(!helloCycleData){
+    if(state.helloCycleStatus === "error"){
+      if(updateFilters) renderFilters();
+      return;
+    }
+    state.helloCycleStatus = "loading";
+    if(updateFilters) renderFilters();
+    setStatusKey("helloCycleLoadingStatus");
+    ensureHelloCyclePortsLoaded()
+      .then(()=>{
+        state.helloCycleStatus = "ready";
+        renderHelloCyclePorts(updateFilters);
+      })
+      .catch(()=>{
+        state.helloCycleStatus = "error";
+        state.helloCycleCount = 0;
+        state.showHelloCyclePorts = false;
+        localStorage.setItem(HELLO_CYCLE_STORAGE_KEY, "0");
+        if(updateFilters) renderFilters();
+        setStatusKey("helloCycleLoadFailedStatus");
+      });
+    return;
+  }
+  const ports = visibleHelloCyclePorts();
+  state.helloCycleCount = ports.length;
+  state.helloCycleStatus = "ready";
+  for(const item of ports){
+    const location = helloCyclePortLocation(item);
+    const marker = L.marker([location.lat, location.lng], {
+      icon:helloCyclePortIcon(),
+      title:location.name,
+      zIndexOffset:-390
+    });
+    marker.on("click", event=>{
+      if(addLocationWaypoint(location)){
+        if(event.originalEvent) L.DomEvent.stop(event.originalEvent);
+        return;
+      }
+      marker.bindPopup(popupElement(location)).openPopup();
+    });
+    marker.addTo(helloCycleLayer);
+  }
+  if(updateFilters) renderFilters();
+  setStatusKey("helloCycleVisibleStatus", ports.length, helloCycleData.ports.length);
 }
 
 function stationDisplayName(station){
@@ -2446,6 +2610,14 @@ function cyclePortElementCount(){
   return state.cyclePortCount;
 }
 
+function helloCyclePortElementCount(){
+  if(!helloCyclePortZoomAvailable()) return t("helloCycleZoomPrompt", HELLO_CYCLE_MIN_ZOOM);
+  if(state.helloCycleStatus === "loading") return t("helloCycleLoading");
+  if(state.helloCycleStatus === "error") return t("helloCycleLoadFailed");
+  if(!state.showHelloCyclePorts) return "";
+  return state.helloCycleCount;
+}
+
 function sourceElementCount(status, count, {zoomMinimum=0}={}){
   if(zoomMinimum && (!map || map.getZoom() < zoomMinimum)) return t("convenienceZoomShort", zoomMinimum);
   if(status === "loading") return t("bathroomLoading");
@@ -2468,6 +2640,10 @@ function bathroomZoomAvailable(){
 
 function cyclePortZoomAvailable(){
   return Boolean(map && map.getZoom() >= CYCLE_PORT_MIN_ZOOM);
+}
+
+function helloCyclePortZoomAvailable(){
+  return Boolean(map && map.getZoom() >= HELLO_CYCLE_MIN_ZOOM);
 }
 
 function renderMapElementFilters(){
@@ -2548,6 +2724,21 @@ function renderMapElementFilters(){
       state.cyclePortStatus = "idle";
       localStorage.setItem(CYCLE_PORT_STORAGE_KEY, checked ? "1" : "0");
       renderCyclePorts();
+    }
+  }));
+  const helloCycleAvailable = helloCyclePortZoomAvailable();
+  mapElementFilters.appendChild(mapElementButton({
+    code:HELLO_CYCLE_EMOJI,
+    name:t("helloCyclePorts"),
+    count:helloCyclePortElementCount(),
+    checked:state.showHelloCyclePorts && helloCycleAvailable,
+    disabled:!helloCycleAvailable || state.helloCycleStatus === "error",
+    dotClass:"hello-cycle-dot",
+    onChange:checked=>{
+      state.showHelloCyclePorts = checked;
+      state.helloCycleStatus = "idle";
+      localStorage.setItem(HELLO_CYCLE_STORAGE_KEY, checked ? "1" : "0");
+      renderHelloCyclePorts();
     }
   }));
   mapElementFilters.appendChild(mapElementButton({
@@ -2656,6 +2847,7 @@ function applyLanguage(){
   renderConvenienceStores(false);
   renderBathrooms(false);
   renderCyclePorts(false);
+  renderHelloCyclePorts(false);
   renderMountainPeaks();
   updateRoute(false);
 }
@@ -2687,6 +2879,7 @@ function init(){
   addSiteQrControl();
   if(map.attributionControl) map.attributionControl.addAttribution(BATHROOM_ATTRIBUTION);
   if(map.attributionControl) map.attributionControl.addAttribution(CYCLE_PORT_ATTRIBUTION);
+  if(map.attributionControl) map.attributionControl.addAttribution(HELLO_CYCLE_ATTRIBUTION);
   if(map.attributionControl) map.attributionControl.addAttribution(STATION_PEAK_ATTRIBUTION);
   const majorStationPane = map.createPane("majorStationPane");
   majorStationPane.style.zIndex = "680";
@@ -2696,6 +2889,7 @@ function init(){
   majorStationLayer = L.layerGroup().addTo(map);
   bathroomLayer = L.layerGroup().addTo(map);
   cyclePortLayer = L.layerGroup().addTo(map);
+  helloCycleLayer = L.layerGroup().addTo(map);
   mountainPeakLayer = L.layerGroup().addTo(map);
   convenienceLayer = L.layerGroup().addTo(map);
   markerLayer = L.layerGroup().addTo(map);
@@ -2726,6 +2920,7 @@ function init(){
     renderMajorStations();
     renderBathrooms();
     renderCyclePorts(state.showCyclePorts);
+    renderHelloCyclePorts(state.showHelloCyclePorts);
     renderConvenienceStores(state.convenienceBrands.size > 0);
     renderMountainPeaks();
   });
@@ -2738,6 +2933,7 @@ function init(){
   renderMajorStations();
   renderBathrooms();
   renderCyclePorts(false);
+  renderHelloCyclePorts(false);
   renderMountainPeaks();
   renderConvenienceStores(false);
   renderMarkers(!restoredRoute);

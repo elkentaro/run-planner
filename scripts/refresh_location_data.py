@@ -53,6 +53,13 @@ SOURCES = (
         "ports",
         1500,
     ),
+    Source(
+        "hello-cycling",
+        "generate_hello_cycling.py",
+        "data/hello-cycling.json",
+        "ports",
+        9500,
+    ),
     Source("runner-shops", "generate_runner_shops.py", "data/runner-shops.json", "locations", 1),
 )
 SOURCE_BY_NAME = {source.name: source for source in SOURCES}

@@ -84,6 +84,7 @@ Independent snapshots and generators:
 | `data/mountain-peaks.json` | `scripts/generate_mountain_peaks.py` |
 | `data/public-toilets.json` | `scripts/generate_public_toilets.py` |
 | `data/docomo-cycle-ports.json` | `scripts/download_docomo_cycle_ports.py` |
+| `data/hello-cycling.json` | `scripts/generate_hello_cycling.py` |
 | `data/runner-shops.json` | `scripts/generate_runner_shops.py` |
 
 The page still uses public GSI raster tiles and the Leaflet CDN, but it does not
@@ -144,6 +145,9 @@ Use:
 - Toggle `🚲 Docomo cycle ports` to show the static Tokyo Bike Share port
   snapshot at zoom level 15 or closer. The layer is off by default, and its
   markers can be added to a drawn route as waypoints or goals.
+- Toggle `🚲 HELLO CYCLING ports` directly below Docomo cycle ports to show the
+  static Tokyo, Kanagawa, Saitama, and Chiba snapshot at zoom level 15 or
+  closer. The layer is off by default.
 - Toggle `☔ Rain radar` / `雨雲レーダー` at the bottom of Map elements to
   show the latest RainViewer precipitation frame. The layer is off by default,
   uses RainViewer's original 512-pixel tiles and palette, and refreshes its
