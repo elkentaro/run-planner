@@ -123,7 +123,9 @@ Use:
 - Use `Export GPX` after selecting `Done` to download the locked route as a GPX
   file. Exported geometry uses the same direct-line points shown on the map and
   includes GPX 1.1 route and track data for broader app compatibility.
-- Use `Map elements` / `地図要素` to toggle curated locations, convenience stores, major stations, public bathrooms, and Docomo cycle ports from one list.
+- Use `Map elements` / `地図要素` to toggle curated locations, convenience
+  stores, major stations, public bathrooms, Docomo cycle ports, and live rain
+  radar from one list.
 - Area filters sit below map elements and reduce visible store markers.
 - Convenience-store markers are off by default. Turn on `Family Mart` or `7/11` at zoom level 14 or closer.
 - Toggle `Major stations` to show or hide small black landmark labels for roughly 100 high-traffic stations in the supported areas.
@@ -133,5 +135,9 @@ Use:
 - Toggle `🚲 Docomo cycle ports` to show the static Tokyo Bike Share port
   snapshot at zoom level 15 or closer. The layer is off by default, and its
   markers can be added to a drawn route as waypoints or goals.
+- Toggle `☔ Rain radar` / `雨雲レーダー` at the bottom of Map elements to
+  show the latest RainViewer precipitation frame. The layer is off by default,
+  uses RainViewer's original 512-pixel tiles and palette, and refreshes its
+  metadata every five minutes.
 - The runner emoji marker is a standalone running shop marker and is not part of the brand key.
 - Use the `EN` / `日本語` switch to change the UI language.
