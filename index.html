@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<meta name="run-planner-version" content="2026.07.31.1">
+<meta name="run-planner-version" content="2026.07.31.2">
 <title>Run Planner Map</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <script data-goatcounter="https://runplanhacker.goatcounter.com/count"
@@ -261,7 +261,7 @@ const TARGET_AREAS = ["東京都", "神奈川県", "埼玉県", "千葉県", "�
 const DATA = {locations:[], areas:TARGET_AREAS, counts:{total:0, byBrand:{}, byArea:{}}};
 let MAJOR_STATIONS = [];
 let RUNNER_LOCATIONS = [];
-const APP_VERSION = "2026.07.31.1";
+const APP_VERSION = "2026.07.31.2";
 const DEFAULT_CENTER = {lat:35.685175,lng:139.752800};
 const GSI_TILE_URL = "https://cyberjapandata.gsi.go.jp/xyz/std/{z}/{x}/{y}.png";
 const GSI_ATTRIBUTION = '<a href="https://maps.gsi.go.jp/development/ichiran.html">地理院タイル</a>';
@@ -284,7 +284,7 @@ const CYCLE_PORT_DATA_URL = "./data/docomo-cycle-ports.json";
 const CYCLE_PORT_SOURCE_URL = "https://www.google.com/maps/d/viewer?mid=1L2l1EnQJhCNlm_Xxkp9RTjIj68Q";
 const CYCLE_PORT_STORAGE_KEY = "runPlannerDocomoCyclePorts";
 const CYCLE_PORT_EMOJI = "🚲";
-const CYCLE_PORT_MIN_ZOOM = 15;
+const CYCLE_PORT_MIN_ZOOM = 13;
 const CYCLE_PORT_MARKER_LIMIT = 500;
 const CYCLE_PORT_ATTRIBUTION = `Cycle-port source: <a href="${CYCLE_PORT_SOURCE_URL}">Tokyo Bike Share Station Map</a>`;
 const HELLO_CYCLE_DATA_URL = "./data/hello-cycling.json";
@@ -292,7 +292,7 @@ const HELLO_CYCLE_SOURCE_URL = "https://api-public.odpt.org/api/v4/gbfs/hellocyc
 const HELLO_CYCLE_CATALOG_URL = "https://ckan.odpt.org/en/dataset/c_bikeshare_gbfs-openstreet";
 const HELLO_CYCLE_STORAGE_KEY = "runPlannerHelloCycling";
 const HELLO_CYCLE_EMOJI = "🚲";
-const HELLO_CYCLE_MIN_ZOOM = 15;
+const HELLO_CYCLE_MIN_ZOOM = 13;
 const HELLO_CYCLE_MARKER_LIMIT = 500;
 const HELLO_CYCLE_ATTRIBUTION = `HELLO CYCLING data: <a href="${HELLO_CYCLE_CATALOG_URL}">OpenStreet Corp. / ODPT</a>`;
 const BRAND_META = {
@@ -359,7 +359,7 @@ const I18N = {
     cyclePortLoading:"loading",
     cyclePortLoadFailed:"failed",
     cyclePortZoomPrompt:zoom=>`zoom ${zoom}+`,
-    cyclePortZoomStatus:zoom=>`Zoom to level ${zoom} or closer to show Docomo cycle ports.`,
+    cyclePortZoomStatus:zoom=>`Current zoom: ${zoom}.`,
     cyclePortLoadingStatus:"Loading Docomo cycle ports",
     cyclePortLoadFailedStatus:"Could not load Docomo cycle ports",
     cyclePortVisibleStatus:(visible,total)=>`${visible} cycle ports visible / ${total} total`,
@@ -368,7 +368,7 @@ const I18N = {
     helloCycleLoading:"loading",
     helloCycleLoadFailed:"failed",
     helloCycleZoomPrompt:zoom=>`zoom ${zoom}+`,
-    helloCycleZoomStatus:zoom=>`Zoom to level ${zoom} or closer to show HELLO CYCLING ports.`,
+    helloCycleZoomStatus:zoom=>`Current zoom: ${zoom}.`,
     helloCycleLoadingStatus:"Loading HELLO CYCLING ports",
     helloCycleLoadFailedStatus:"Could not load HELLO CYCLING ports",
     helloCycleVisibleStatus:(visible,total)=>`${visible} HELLO CYCLING ports visible / ${total} total`,
@@ -482,7 +482,7 @@ const I18N = {
     cyclePortLoading:"読込中",
     cyclePortLoadFailed:"失敗",
     cyclePortZoomPrompt:zoom=>`ズーム${zoom}+`,
-    cyclePortZoomStatus:zoom=>`ズーム${zoom}以上でドコモ・バイクシェアのポートを表示します。`,
+    cyclePortZoomStatus:zoom=>`現在のズームレベル: ${zoom}`,
     cyclePortLoadingStatus:"ドコモ・バイクシェアのポートを読み込み中",
     cyclePortLoadFailedStatus:"ドコモ・バイクシェアのポートを読み込めませんでした",
     cyclePortVisibleStatus:(visible,total)=>`${visible}件のポートを表示 / 全${total}件`,
@@ -491,7 +491,7 @@ const I18N = {
     helloCycleLoading:"読込中",
     helloCycleLoadFailed:"失敗",
     helloCycleZoomPrompt:zoom=>`ズーム${zoom}+`,
-    helloCycleZoomStatus:zoom=>`ズーム${zoom}以上でHELLO CYCLINGのポートを表示します。`,
+    helloCycleZoomStatus:zoom=>`現在のズームレベル: ${zoom}`,
     helloCycleLoadingStatus:"HELLO CYCLINGのポートを読み込み中",
     helloCycleLoadFailedStatus:"HELLO CYCLINGのポートを読み込めませんでした",
     helloCycleVisibleStatus:(visible,total)=>`${visible}件のHELLO CYCLINGポートを表示 / 全${total}件`,
@@ -2077,7 +2077,7 @@ function renderCyclePorts(updateFilters=true){
     state.cyclePortCount = 0;
     state.cyclePortStatus = "zoom";
     if(updateFilters) renderFilters();
-    if(updateFilters) setStatusKey("cyclePortZoomStatus", CYCLE_PORT_MIN_ZOOM);
+    if(updateFilters) setStatusKey("cyclePortZoomStatus", map.getZoom());
     return;
   }
   if(!cyclePortData){
@@ -2191,7 +2191,7 @@ function renderHelloCyclePorts(updateFilters=true){
     state.helloCycleCount = 0;
     state.helloCycleStatus = "zoom";
     if(updateFilters) renderFilters();
-    if(updateFilters) setStatusKey("helloCycleZoomStatus", HELLO_CYCLE_MIN_ZOOM);
+    if(updateFilters) setStatusKey("helloCycleZoomStatus", map.getZoom());
     return;
   }
   if(!helloCycleData){
