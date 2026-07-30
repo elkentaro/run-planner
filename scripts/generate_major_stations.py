@@ -13,9 +13,57 @@ from location_data_common import clean_text, number, read_json, write_json_if_ch
 
 def generate(source_path: Path) -> dict[str, object]:
     raw = read_json(source_path)
-    stations = raw.get("stations") if isinstance(raw, dict) else None
-    if not isinstance(stations, list) or len(stations) < 80:
+    base_stations = raw.get("stations") if isinstance(raw, dict) else None
+    if not isinstance(base_stations, list) or len(base_stations) < 80:
         raise ValueError("major-station source did not contain at least 80 stations")
+    source = raw.get("source")
+    if not isinstance(source, dict):
+        raise ValueError("major-station source metadata must be an object")
+    stations = [dict(station) if isinstance(station, dict) else station for station in base_stations]
+    stations_by_name = {
+        clean_text(station.get("nameJa") or station.get("name")): station
+        for station in stations
+        if isinstance(station, dict)
+    }
+    corridors = raw.get("corridors", [])
+    if not isinstance(corridors, list):
+        raise ValueError("major-station corridors must be a list")
+    for corridor in corridors:
+        if not isinstance(corridor, dict):
+            raise ValueError("major-station source contains a non-object corridor")
+        corridor_id = clean_text(corridor.get("id"))
+        corridor_stations = corridor.get("stations")
+        if not corridor_id or not isinstance(corridor_stations, list):
+            raise ValueError("major-station source contains an invalid corridor")
+        major_station_names = corridor.get("majorStations", [])
+        detail_min_zoom = number(corridor.get("detailMinZoom"))
+        if not isinstance(major_station_names, list):
+            raise ValueError(f"major-station corridor {corridor_id} has invalid major stations")
+        if "detailMinZoom" in corridor and detail_min_zoom is None:
+            raise ValueError(f"major-station corridor {corridor_id} has an invalid detail zoom")
+        major_station_names = {clean_text(name) for name in major_station_names}
+        for corridor_station in corridor_stations:
+            if not isinstance(corridor_station, dict):
+                raise ValueError(f"major-station corridor {corridor_id} contains a non-object station")
+            station_name = clean_text(corridor_station.get("nameJa") or corridor_station.get("name"))
+            if not station_name:
+                raise ValueError(f"major-station corridor {corridor_id} contains an unnamed station")
+            station = stations_by_name.get(station_name)
+            if station is None:
+                station = dict(corridor_station)
+                station.setdefault("name", station_name)
+                station.setdefault("nameJa", station_name)
+                if detail_min_zoom is not None and station_name not in major_station_names:
+                    station["minZoom"] = detail_min_zoom
+                stations.append(station)
+                stations_by_name[station_name] = station
+            lines = station.setdefault("lines", [])
+            if not isinstance(lines, list):
+                raise ValueError(f"major-station {station_name} has invalid lines")
+            if corridor_id not in lines:
+                lines.append(corridor_id)
+    if len(stations) < 160:
+        raise ValueError("major-station source did not produce at least 160 unique stations")
     ids: set[str] = set()
     for station in stations:
         if not isinstance(station, dict):
@@ -29,9 +77,8 @@ def generate(source_path: Path) -> dict[str, object]:
     return {
         "schemaVersion": 1,
         "source": {
+            **source,
             "id": "major-stations",
-            "name": "Open Portal station passenger rankings",
-            "type": "curated",
         },
         "generatedAt": datetime.now(timezone.utc).isoformat(),
         "counts": {"total": len(stations)},

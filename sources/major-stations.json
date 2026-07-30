@@ -1,8 +1,119 @@
 {
   "source": {
-    "name": "Open Portal station passenger rankings",
-    "type": "curated"
+    "name": "Open Portal rankings with curated JR East and Keio corridors",
+    "type": "curated",
+    "stationLists": [
+      "JR East Tokyo-area route map",
+      "Keio station and route map"
+    ],
+    "coordinates": "OpenStreetMap station stop positions",
+    "referenceUrls": [
+      "https://www.jreast.co.jp/map/pdf/map_tokyo.pdf",
+      "https://www.keio.co.jp/train/station/",
+      "https://www.openstreetmap.org/copyright"
+    ]
   },
+  "corridors": [
+    {
+      "id": "jr-ome",
+      "nameJa": "青梅線",
+      "nameEn": "Ome Line",
+      "operator": "東日本旅客鉄道",
+      "detailMinZoom": 14,
+      "majorStations": ["立川", "拝島", "福生", "河辺", "青梅", "御嶽", "奥多摩"],
+      "stations": [
+        {"id":"jr-ome-tachikawa","name":"立川","nameJa":"立川","nameEn":"Tachikawa","lat":35.6980787,"lng":139.4135506,"pref":"東京都","operator":"東日本旅客鉄道"},
+        {"id":"jr-ome-nishi-tachikawa","name":"西立川","nameJa":"西立川","nameEn":"Nishi-Tachikawa","lat":35.7034586,"lng":139.3935897,"pref":"東京都","operator":"東日本旅客鉄道"},
+        {"id":"jr-ome-higashi-nakagami","name":"東中神","nameJa":"東中神","nameEn":"Higashi-Nakagami","lat":35.7064476,"lng":139.3841065,"pref":"東京都","operator":"東日本旅客鉄道"},
+        {"id":"jr-ome-nakagami","name":"中神","nameJa":"中神","nameEn":"Nakagami","lat":35.7090889,"lng":139.3755065,"pref":"東京都","operator":"東日本旅客鉄道"},
+        {"id":"jr-ome-akishima","name":"昭島","nameJa":"昭島","nameEn":"Akishima","lat":35.7135235,"lng":139.3608744,"pref":"東京都","operator":"東日本旅客鉄道"},
+        {"id":"jr-ome-haijima","name":"拝島","nameJa":"拝島","nameEn":"Haijima","lat":35.7211729,"lng":139.3434471,"pref":"東京都","operator":"東日本旅客鉄道"},
+        {"id":"jr-ome-ushihama","name":"牛浜","nameJa":"牛浜","nameEn":"Ushihama","lat":35.7345804,"lng":139.3335638,"pref":"東京都","operator":"東日本旅客鉄道"},
+        {"id":"jr-ome-fussa","name":"福生","nameJa":"福生","nameEn":"Fussa","lat":35.742328,"lng":139.3278175,"pref":"東京都","operator":"東日本旅客鉄道"},
+        {"id":"jr-ome-hamura","name":"羽村","nameJa":"羽村","nameEn":"Hamura","lat":35.7583304,"lng":139.3159656,"pref":"東京都","operator":"東日本旅客鉄道"},
+        {"id":"jr-ome-ozaku","name":"小作","nameJa":"小作","nameEn":"Ozaku","lat":35.7763022,"lng":139.3019098,"pref":"東京都","operator":"東日本旅客鉄道"},
+        {"id":"jr-ome-kabe","name":"河辺","nameJa":"河辺","nameEn":"Kabe","lat":35.7844637,"lng":139.2845896,"pref":"東京都","operator":"東日本旅客鉄道"},
+        {"id":"jr-ome-higashi-ome","name":"東青梅","nameJa":"東青梅","nameEn":"Higashi-Ome","lat":35.7899487,"lng":139.272536,"pref":"東京都","operator":"東日本旅客鉄道"},
+        {"id":"jr-ome-ome","name":"青梅","nameJa":"青梅","nameEn":"Ome","lat":35.79041,"lng":139.2583283,"pref":"東京都","operator":"東日本旅客鉄道"},
+        {"id":"jr-ome-miyanohira","name":"宮ノ平","nameJa":"宮ノ平","nameEn":"Miyanohira","lat":35.7874947,"lng":139.2370287,"pref":"東京都","operator":"東日本旅客鉄道"},
+        {"id":"jr-ome-hinatawada","name":"日向和田","nameJa":"日向和田","nameEn":"Hinatawada","lat":35.7881925,"lng":139.2298103,"pref":"東京都","operator":"東日本旅客鉄道"},
+        {"id":"jr-ome-ishigamimae","name":"石神前","nameJa":"石神前","nameEn":"Ishigamimae","lat":35.7966509,"lng":139.225246,"pref":"東京都","operator":"東日本旅客鉄道"},
+        {"id":"jr-ome-futamatao","name":"二俣尾","nameJa":"二俣尾","nameEn":"Futamatao","lat":35.8042712,"lng":139.2159226,"pref":"東京都","operator":"東日本旅客鉄道"},
+        {"id":"jr-ome-ikusabata","name":"軍畑","nameJa":"軍畑","nameEn":"Ikusabata","lat":35.8076658,"lng":139.2076536,"pref":"東京都","operator":"東日本旅客鉄道"},
+        {"id":"jr-ome-sawai","name":"沢井","nameJa":"沢井","nameEn":"Sawai","lat":35.8059112,"lng":139.1937545,"pref":"東京都","operator":"東日本旅客鉄道"},
+        {"id":"jr-ome-mitake","name":"御嶽","nameJa":"御嶽","nameEn":"Mitake","lat":35.8013884,"lng":139.1818845,"pref":"東京都","operator":"東日本旅客鉄道"},
+        {"id":"jr-ome-kawai","name":"川井","nameJa":"川井","nameEn":"Kawai","lat":35.8137011,"lng":139.164028,"pref":"東京都","operator":"東日本旅客鉄道"},
+        {"id":"jr-ome-kori","name":"古里","nameJa":"古里","nameEn":"Kori","lat":35.8162887,"lng":139.1516293,"pref":"東京都","operator":"東日本旅客鉄道"},
+        {"id":"jr-ome-hatonosu","name":"鳩ノ巣","nameJa":"鳩ノ巣","nameEn":"Hatonosu","lat":35.8151194,"lng":139.1287096,"pref":"東京都","operator":"東日本旅客鉄道"},
+        {"id":"jr-ome-shiromaru","name":"白丸","nameJa":"白丸","nameEn":"Shiromaru","lat":35.8119675,"lng":139.1148337,"pref":"東京都","operator":"東日本旅客鉄道"},
+        {"id":"jr-ome-okutama","name":"奥多摩","nameJa":"奥多摩","nameEn":"Oku-Tama","lat":35.8094299,"lng":139.0968064,"pref":"東京都","operator":"東日本旅客鉄道"}
+      ]
+    },
+    {
+      "id": "jr-itsukaichi",
+      "nameJa": "五日市線",
+      "nameEn": "Itsukaichi Line",
+      "operator": "東日本旅客鉄道",
+      "detailMinZoom": 14,
+      "majorStations": ["拝島", "秋川", "武蔵五日市"],
+      "stations": [
+        {"id":"jr-itsukaichi-haijima","name":"拝島","nameJa":"拝島","nameEn":"Haijima","lat":35.7211729,"lng":139.3434471,"pref":"東京都","operator":"東日本旅客鉄道"},
+        {"id":"jr-itsukaichi-kumagawa","name":"熊川","nameJa":"熊川","nameEn":"Kumagawa","lat":35.7284669,"lng":139.3354099,"pref":"東京都","operator":"東日本旅客鉄道"},
+        {"id":"jr-itsukaichi-higashi-akiru","name":"東秋留","nameJa":"東秋留","nameEn":"Higashi-Akiru","lat":35.7258724,"lng":139.3111937,"pref":"東京都","operator":"東日本旅客鉄道"},
+        {"id":"jr-itsukaichi-akigawa","name":"秋川","nameJa":"秋川","nameEn":"Akigawa","lat":35.7280568,"lng":139.2866849,"pref":"東京都","operator":"東日本旅客鉄道"},
+        {"id":"jr-itsukaichi-musashi-hikida","name":"武蔵引田","nameJa":"武蔵引田","nameEn":"Musashi-Hikida","lat":35.7297171,"lng":139.2700981,"pref":"東京都","operator":"東日本旅客鉄道"},
+        {"id":"jr-itsukaichi-musashi-masuko","name":"武蔵増戸","nameJa":"武蔵増戸","nameEn":"Musashi-Masuko","lat":35.7309564,"lng":139.2562005,"pref":"東京都","operator":"東日本旅客鉄道"},
+        {"id":"jr-itsukaichi-musashi-itsukaichi","name":"武蔵五日市","nameJa":"武蔵五日市","nameEn":"Musashi-Itsukaichi","lat":35.7322027,"lng":139.2279385,"pref":"東京都","operator":"東日本旅客鉄道"}
+      ]
+    },
+    {
+      "id": "keio-shinjuku-takaosanguchi",
+      "nameJa": "京王線・高尾線（新宿〜高尾山口）",
+      "nameEn": "Keio and Takao lines (Shinjuku-Takaosanguchi)",
+      "operator": "京王電鉄",
+      "detailMinZoom": 14,
+      "majorStations": ["新宿", "明大前", "調布", "府中", "分倍河原", "聖蹟桜ヶ丘", "高幡不動", "北野", "高尾", "高尾山口"],
+      "stations": [
+        {"id":"keio-ko01-shinjuku","name":"新宿","nameJa":"新宿","nameEn":"Shinjuku","lat":35.6904577,"lng":139.6991484,"pref":"東京都","operator":"京王電鉄","stationCode":"KO01"},
+        {"id":"keio-ko04-sasazuka","name":"笹塚","nameJa":"笹塚","nameEn":"Sasazuka","lat":35.6735243,"lng":139.6671649,"pref":"東京都","operator":"京王電鉄","stationCode":"KO04"},
+        {"id":"keio-ko05-daitabashi","name":"代田橋","nameJa":"代田橋","nameEn":"Daitabashi","lat":35.6710857,"lng":139.6594286,"pref":"東京都","operator":"京王電鉄","stationCode":"KO05"},
+        {"id":"keio-ko06-meidaimae","name":"明大前","nameJa":"明大前","nameEn":"Meidaimae","lat":35.6683079,"lng":139.6504599,"pref":"東京都","operator":"京王電鉄","stationCode":"KO06"},
+        {"id":"keio-ko07-shimotakaido","name":"下高井戸","nameJa":"下高井戸","nameEn":"Shimotakaido","lat":35.6660765,"lng":139.6420504,"pref":"東京都","operator":"京王電鉄","stationCode":"KO07"},
+        {"id":"keio-ko08-sakurajosui","name":"桜上水","nameJa":"桜上水","nameEn":"Sakurajosui","lat":35.6675454,"lng":139.6320286,"pref":"東京都","operator":"京王電鉄","stationCode":"KO08"},
+        {"id":"keio-ko09-kamikitazawa","name":"上北沢","nameJa":"上北沢","nameEn":"Kamikitazawa","lat":35.6688199,"lng":139.623299,"pref":"東京都","operator":"京王電鉄","stationCode":"KO09"},
+        {"id":"keio-ko10-hachimanyama","name":"八幡山","nameJa":"八幡山","nameEn":"Hachimanyama","lat":35.6698439,"lng":139.6156966,"pref":"東京都","operator":"京王電鉄","stationCode":"KO10"},
+        {"id":"keio-ko11-rokakoen","name":"芦花公園","nameJa":"芦花公園","nameEn":"Rokakoen","lat":35.6706085,"lng":139.6086369,"pref":"東京都","operator":"京王電鉄","stationCode":"KO11"},
+        {"id":"keio-ko12-chitosekarasuyama","name":"千歳烏山","nameJa":"千歳烏山","nameEn":"Chitosekarasuyama","lat":35.667995,"lng":139.6008882,"pref":"東京都","operator":"京王電鉄","stationCode":"KO12"},
+        {"id":"keio-ko13-sengawa","name":"仙川","nameJa":"仙川","nameEn":"Sengawa","lat":35.6623088,"lng":139.5850146,"pref":"東京都","operator":"京王電鉄","stationCode":"KO13"},
+        {"id":"keio-ko14-tsutsujigaoka","name":"つつじヶ丘","nameJa":"つつじヶ丘","nameEn":"Tsutsujigaoka","lat":35.6580925,"lng":139.5753341,"pref":"東京都","operator":"京王電鉄","stationCode":"KO14"},
+        {"id":"keio-ko15-shibasaki","name":"柴崎","nameJa":"柴崎","nameEn":"Shibasaki","lat":35.6542039,"lng":139.5670015,"pref":"東京都","operator":"京王電鉄","stationCode":"KO15"},
+        {"id":"keio-ko16-kokuryo","name":"国領","nameJa":"国領","nameEn":"Kokuryo","lat":35.6502272,"lng":139.5586883,"pref":"東京都","operator":"京王電鉄","stationCode":"KO16"},
+        {"id":"keio-ko17-fuda","name":"布田","nameJa":"布田","nameEn":"Fuda","lat":35.6497794,"lng":139.5518035,"pref":"東京都","operator":"京王電鉄","stationCode":"KO17"},
+        {"id":"keio-ko18-chofu","name":"調布","nameJa":"調布","nameEn":"Chofu","lat":35.6517962,"lng":139.5450194,"pref":"東京都","operator":"京王電鉄","stationCode":"KO18"},
+        {"id":"keio-ko19-nishichofu","name":"西調布","nameJa":"西調布","nameEn":"Nishichofu","lat":35.6571622,"lng":139.5298138,"pref":"東京都","operator":"京王電鉄","stationCode":"KO19"},
+        {"id":"keio-ko20-tobitakyu","name":"飛田給","nameJa":"飛田給","nameEn":"Tobitakyu","lat":35.6600705,"lng":139.5234838,"pref":"東京都","operator":"京王電鉄","stationCode":"KO20"},
+        {"id":"keio-ko21-musashinodai","name":"武蔵野台","nameJa":"武蔵野台","nameEn":"Musashinodai","lat":35.6641936,"lng":139.5110585,"pref":"東京都","operator":"京王電鉄","stationCode":"KO21"},
+        {"id":"keio-ko22-tamareien","name":"多磨霊園","nameJa":"多磨霊園","nameEn":"Tama-reien","lat":35.6662098,"lng":139.5026135,"pref":"東京都","operator":"京王電鉄","stationCode":"KO22"},
+        {"id":"keio-ko23-higashifuchu","name":"東府中","nameJa":"東府中","nameEn":"Higashi-fuchu","lat":35.6687114,"lng":139.4956428,"pref":"東京都","operator":"京王電鉄","stationCode":"KO23"},
+        {"id":"keio-ko24-fuchu","name":"府中","nameJa":"府中","nameEn":"Fuchu","lat":35.6721865,"lng":139.4801327,"pref":"東京都","operator":"京王電鉄","stationCode":"KO24"},
+        {"id":"keio-ko25-bubaigawara","name":"分倍河原","nameJa":"分倍河原","nameEn":"Bubaigawara","lat":35.6684631,"lng":139.4685299,"pref":"東京都","operator":"京王電鉄","stationCode":"KO25"},
+        {"id":"keio-ko26-nakagawara","name":"中河原","nameJa":"中河原","nameEn":"Nakagawara","lat":35.6595936,"lng":139.4579012,"pref":"東京都","operator":"京王電鉄","stationCode":"KO26"},
+        {"id":"keio-ko27-seisekisakuragaoka","name":"聖蹟桜ヶ丘","nameJa":"聖蹟桜ヶ丘","nameEn":"Seiseki-sakuragaoka","lat":35.65077,"lng":139.4469043,"pref":"東京都","operator":"京王電鉄","stationCode":"KO27"},
+        {"id":"keio-ko28-mogusaen","name":"百草園","nameJa":"百草園","nameEn":"Mogusaen","lat":35.6574825,"lng":139.4310394,"pref":"東京都","operator":"京王電鉄","stationCode":"KO28"},
+        {"id":"keio-ko29-takahatafudo","name":"高幡不動","nameJa":"高幡不動","nameEn":"Takahatafudo","lat":35.6622097,"lng":139.4133268,"pref":"東京都","operator":"京王電鉄","stationCode":"KO29"},
+        {"id":"keio-ko30-minamidaira","name":"南平","nameJa":"南平","nameEn":"Minamidaira","lat":35.6549697,"lng":139.3923466,"pref":"東京都","operator":"京王電鉄","stationCode":"KO30"},
+        {"id":"keio-ko31-hirayamajoshikoen","name":"平山城址公園","nameJa":"平山城址公園","nameEn":"Hirayamajoshi-koen","lat":35.6475285,"lng":139.3801778,"pref":"東京都","operator":"京王電鉄","stationCode":"KO31"},
+        {"id":"keio-ko32-naganuma","name":"長沼","nameJa":"長沼","nameEn":"Naganuma","lat":35.6427854,"lng":139.3660266,"pref":"東京都","operator":"京王電鉄","stationCode":"KO32"},
+        {"id":"keio-ko33-kitano","name":"北野","nameJa":"北野","nameEn":"Kitano","lat":35.6444283,"lng":139.3542963,"pref":"東京都","operator":"京王電鉄","stationCode":"KO33"},
+        {"id":"keio-ko48-keiokatakura","name":"京王片倉","nameJa":"京王片倉","nameEn":"Keio-katakura","lat":35.6443304,"lng":139.3370835,"pref":"東京都","operator":"京王電鉄","stationCode":"KO48"},
+        {"id":"keio-ko49-yamada","name":"山田","nameJa":"山田","nameEn":"Yamada","lat":35.6443327,"lng":139.3210991,"pref":"東京都","operator":"京王電鉄","stationCode":"KO49"},
+        {"id":"keio-ko50-mejirodai","name":"めじろ台","nameJa":"めじろ台","nameEn":"Mejirodai","lat":35.6435185,"lng":139.3081195,"pref":"東京都","operator":"京王電鉄","stationCode":"KO50"},
+        {"id":"keio-ko51-hazama","name":"狭間","nameJa":"狭間","nameEn":"Hazama","lat":35.640709,"lng":139.2931212,"pref":"東京都","operator":"京王電鉄","stationCode":"KO51"},
+        {"id":"keio-ko52-takao","name":"高尾","nameJa":"高尾","nameEn":"Takao","lat":35.6416078,"lng":139.2816491,"pref":"東京都","operator":"京王電鉄","stationCode":"KO52"},
+        {"id":"keio-ko53-takaosanguchi","name":"高尾山口","nameJa":"高尾山口","nameEn":"Takaosanguchi","lat":35.6325743,"lng":139.2700446,"pref":"東京都","operator":"京王電鉄","stationCode":"KO53"}
+      ]
+    }
+  ],
   "stations": [
     {
       "name": "新宿",
