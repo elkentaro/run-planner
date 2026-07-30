@@ -13,13 +13,13 @@
       "https://www.openstreetmap.org/copyright"
     ]
   },
+  "baseMajorCount": 18,
   "corridors": [
     {
       "id": "jr-ome",
       "nameJa": "青梅線",
       "nameEn": "Ome Line",
       "operator": "東日本旅客鉄道",
-      "detailMinZoom": 14,
       "majorStations": ["立川", "拝島", "福生", "河辺", "青梅", "御嶽", "奥多摩"],
       "stations": [
         {"id":"jr-ome-tachikawa","name":"立川","nameJa":"立川","nameEn":"Tachikawa","lat":35.6980787,"lng":139.4135506,"pref":"東京都","operator":"東日本旅客鉄道"},
@@ -54,7 +54,6 @@
       "nameJa": "五日市線",
       "nameEn": "Itsukaichi Line",
       "operator": "東日本旅客鉄道",
-      "detailMinZoom": 14,
       "majorStations": ["拝島", "秋川", "武蔵五日市"],
       "stations": [
         {"id":"jr-itsukaichi-haijima","name":"拝島","nameJa":"拝島","nameEn":"Haijima","lat":35.7211729,"lng":139.3434471,"pref":"東京都","operator":"東日本旅客鉄道"},
@@ -71,7 +70,6 @@
       "nameJa": "京王線・高尾線（新宿〜高尾山口）",
       "nameEn": "Keio and Takao lines (Shinjuku-Takaosanguchi)",
       "operator": "京王電鉄",
-      "detailMinZoom": 14,
       "majorStations": ["新宿", "明大前", "調布", "府中", "分倍河原", "聖蹟桜ヶ丘", "高幡不動", "北野", "高尾", "高尾山口"],
       "stations": [
         {"id":"keio-ko01-shinjuku","name":"新宿","nameJa":"新宿","nameEn":"Shinjuku","lat":35.6904577,"lng":139.6991484,"pref":"東京都","operator":"京王電鉄","stationCode":"KO01"},

@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<meta name="run-planner-version" content="2026.07.30.2">
+<meta name="run-planner-version" content="2026.07.30.3">
 <title>Run Planner Map</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <script data-goatcounter="https://runplanhacker.goatcounter.com/count"
@@ -240,7 +240,7 @@ const TARGET_AREAS = ["東京都", "神奈川県", "埼玉県", "千葉県", "�
 const DATA = {locations:[], areas:TARGET_AREAS, counts:{total:0, byBrand:{}, byArea:{}}};
 let MAJOR_STATIONS = [];
 let RUNNER_LOCATIONS = [];
-const APP_VERSION = "2026.07.30.2";
+const APP_VERSION = "2026.07.30.3";
 const DEFAULT_CENTER = {lat:35.685175,lng:139.752800};
 const GSI_TILE_URL = "https://cyberjapandata.gsi.go.jp/xyz/std/{z}/{x}/{y}.png";
 const GSI_ATTRIBUTION = '<a href="https://maps.gsi.go.jp/development/ichiran.html">地理院タイル</a>';
@@ -279,6 +279,7 @@ const CONVENIENCE_META = {
   "7-Eleven": {id:"seven-eleven", url:"./data/seven-eleven.json", minimum:6000, short:"7/11", markerText:"7/11", className:"brand-seven", labels:{en:"7-Eleven", ja:"セブン-イレブン"}}
 };
 const MAJOR_STATION_DATA_URL = "./data/major-stations.json";
+const ALL_STATIONS_MIN_ZOOM = 14;
 const RUNNER_SHOP_DATA_URL = "./data/runner-shops.json";
 const AREA_LABELS = {
   en: {"東京都":"Tokyo","神奈川県":"Kanagawa","埼玉県":"Saitama","千葉県":"Chiba","栃木県":"Tochigi"},
@@ -1916,22 +1917,14 @@ function renderConvenienceStores(updateStatus=false){
   if(updateStatus) setStatusKey("convenienceVisibleStatus", visible.length, candidates.length);
 }
 
-function majorStationZoomLimit(){
-  const zoom = map ? map.getZoom() : 10;
-  if(zoom >= 14) return MAJOR_STATIONS.length;
-  if(zoom >= 12) return 70;
-  if(zoom >= 11) return 36;
-  return 18;
-}
-
 function visibleMajorStations(){
   if(!state.showMajorStations || !map) return [];
   const bounds = map.getBounds().pad(0.2);
   const zoom = map.getZoom();
-  const limit = majorStationZoomLimit();
-  return MAJOR_STATIONS
-    .filter(station=>(!station.minZoom || zoom >= station.minZoom) && bounds.contains([station.lat, station.lng]))
-    .slice(0, limit);
+  const stations = zoom >= ALL_STATIONS_MIN_ZOOM
+    ? MAJOR_STATIONS
+    : MAJOR_STATIONS.filter(station=>station.isMajor);
+  return stations.filter(station=>bounds.contains([station.lat, station.lng]));
 }
 
 function renderMajorStations(){

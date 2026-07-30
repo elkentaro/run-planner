@@ -19,7 +19,13 @@ def generate(source_path: Path) -> dict[str, object]:
     source = raw.get("source")
     if not isinstance(source, dict):
         raise ValueError("major-station source metadata must be an object")
+    base_major_count = number(raw.get("baseMajorCount"))
+    if base_major_count is None or not base_major_count.is_integer() or not 1 <= base_major_count <= len(base_stations):
+        raise ValueError("major-station source has an invalid base major count")
     stations = [dict(station) if isinstance(station, dict) else station for station in base_stations]
+    for station in stations[: int(base_major_count)]:
+        if isinstance(station, dict):
+            station["isMajor"] = True
     stations_by_name = {
         clean_text(station.get("nameJa") or station.get("name")): station
         for station in stations
@@ -36,11 +42,8 @@ def generate(source_path: Path) -> dict[str, object]:
         if not corridor_id or not isinstance(corridor_stations, list):
             raise ValueError("major-station source contains an invalid corridor")
         major_station_names = corridor.get("majorStations", [])
-        detail_min_zoom = number(corridor.get("detailMinZoom"))
         if not isinstance(major_station_names, list):
             raise ValueError(f"major-station corridor {corridor_id} has invalid major stations")
-        if "detailMinZoom" in corridor and detail_min_zoom is None:
-            raise ValueError(f"major-station corridor {corridor_id} has an invalid detail zoom")
         major_station_names = {clean_text(name) for name in major_station_names}
         for corridor_station in corridor_stations:
             if not isinstance(corridor_station, dict):
@@ -53,10 +56,10 @@ def generate(source_path: Path) -> dict[str, object]:
                 station = dict(corridor_station)
                 station.setdefault("name", station_name)
                 station.setdefault("nameJa", station_name)
-                if detail_min_zoom is not None and station_name not in major_station_names:
-                    station["minZoom"] = detail_min_zoom
                 stations.append(station)
                 stations_by_name[station_name] = station
+            if station_name in major_station_names:
+                station["isMajor"] = True
             lines = station.setdefault("lines", [])
             if not isinstance(lines, list):
                 raise ValueError(f"major-station {station_name} has invalid lines")
