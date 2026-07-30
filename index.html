@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<meta name="run-planner-version" content="2026.07.28.4">
+<meta name="run-planner-version" content="2026.07.28.6">
 <title>Run Planner Map</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <script data-goatcounter="https://runplanhacker.goatcounter.com/count"
@@ -235,7 +235,7 @@ const TARGET_AREAS = ["東京都", "神奈川県", "埼玉県", "千葉県", "�
 const DATA = {locations:[], areas:TARGET_AREAS, counts:{total:0, byBrand:{}, byArea:{}}};
 let MAJOR_STATIONS = [];
 let RUNNER_LOCATIONS = [];
-const APP_VERSION = "2026.07.28.5";
+const APP_VERSION = "2026.07.28.6";
 const DEFAULT_CENTER = {lat:35.685175,lng:139.752800};
 const GSI_TILE_URL = "https://cyberjapandata.gsi.go.jp/xyz/std/{z}/{x}/{y}.png";
 const GSI_ATTRIBUTION = '<a href="https://maps.gsi.go.jp/development/ichiran.html">地理院タイル</a>';
@@ -528,8 +528,11 @@ let cyclePortData = null;
 let cyclePortLoadPromise = null;
 let majorStationStatus = "loading";
 let rainRadarLayer = null;
+let rainRadarPendingLayer = null;
+let rainRadarTileUrl = "";
 let rainRadarLoadPromise = null;
 let rainRadarRefreshTimer = null;
+let rainRadarRedrawTimer = null;
 let map, centerMarker, routeCircle, markerLayer, convenienceLayer, bathroomLayer, cyclePortLayer, majorStationLayer, drawnRouteLine, routePointLayer, routeDistancePopupTimer, routeVisualOverlay, routeVisualPath, routeVisualFrame, bearingResetControl, bearingResetButton, siteQrControl, siteQrLink;
 
 const locationInput = document.getElementById("locationInput");
@@ -2038,21 +2041,64 @@ function scheduleRainRadarRefresh(){
   }
 }
 
-function setRainRadarLayer(tileUrl){
-  if(rainRadarLayer){
-    rainRadarLayer.setUrl(tileUrl);
-  }else{
-    rainRadarLayer = L.tileLayer(tileUrl, {
-      pane:"rainRadarPane",
-      opacity:.65,
-      maxZoom:18,
-      maxNativeZoom:8,
-      zIndex:10,
-      tileSize:512,
-      zoomOffset:-1,
-      attribution:RAIN_RADAR_ATTRIBUTION
-    }).addTo(map);
+function createRainRadarLayer(tileUrl){
+  return L.tileLayer(tileUrl, {
+    pane:"rainRadarPane",
+    opacity:.65,
+    maxZoom:18,
+    maxNativeZoom:8,
+    zIndex:10,
+    tileSize:512,
+    zoomOffset:-1,
+    keepBuffer:6,
+    updateWhenZooming:false,
+    attribution:RAIN_RADAR_ATTRIBUTION
+  });
+}
+
+function discardPendingRainRadarLayer(){
+  if(!rainRadarPendingLayer) return;
+  rainRadarPendingLayer.off();
+  if(map.hasLayer(rainRadarPendingLayer)) map.removeLayer(rainRadarPendingLayer);
+  rainRadarPendingLayer = null;
+}
+
+function setRainRadarLayer(tileUrl, forceRedraw=false){
+  rainRadarTileUrl = tileUrl;
+  if(!rainRadarLayer){
+    rainRadarLayer = createRainRadarLayer(tileUrl).addTo(map);
+    return;
   }
+  if(!forceRedraw && rainRadarLayer._url === tileUrl) return;
+  discardPendingRainRadarLayer();
+  const previousLayer = rainRadarLayer;
+  const nextLayer = createRainRadarLayer(tileUrl);
+  let loadedTile = false;
+  rainRadarPendingLayer = nextLayer;
+  nextLayer.on("tileload", ()=>{ loadedTile = true; });
+  nextLayer.once("load", ()=>{
+    if(nextLayer !== rainRadarPendingLayer) return;
+    rainRadarPendingLayer = null;
+    if(!state.showRainRadar || !loadedTile){
+      nextLayer.off();
+      if(map.hasLayer(nextLayer)) map.removeLayer(nextLayer);
+      return;
+    }
+    rainRadarLayer = nextLayer;
+    if(map.hasLayer(previousLayer)) map.removeLayer(previousLayer);
+  });
+  nextLayer.addTo(map);
+}
+
+function scheduleRainRadarRedraw(){
+  if(rainRadarRedrawTimer) window.clearTimeout(rainRadarRedrawTimer);
+  if(!state.showRainRadar || !rainRadarLayer || !rainRadarTileUrl) return;
+  rainRadarRedrawTimer = window.setTimeout(()=>{
+    rainRadarRedrawTimer = null;
+    if(state.showRainRadar && rainRadarLayer && rainRadarTileUrl){
+      setRainRadarLayer(rainRadarTileUrl, true);
+    }
+  }, 120);
 }
 
 async function refreshRainRadar(silent=false){
@@ -2098,10 +2144,16 @@ function setRainRadarEnabled(enabled){
     scheduleRainRadarRefresh();
   }else{
     stopRainRadarRefresh();
+    if(rainRadarRedrawTimer){
+      window.clearTimeout(rainRadarRedrawTimer);
+      rainRadarRedrawTimer = null;
+    }
+    discardPendingRainRadarLayer();
     if(rainRadarLayer){
       map.removeLayer(rainRadarLayer);
       rainRadarLayer = null;
     }
+    rainRadarTileUrl = "";
     state.rainRadarStatus = "idle";
     state.rainRadarTime = null;
     renderMapElementFilters();
@@ -2390,6 +2442,7 @@ function init(){
       showRouteMenu(event.latlng);
     }
   });
+  map.on("zoomend", scheduleRainRadarRedraw);
   map.on("zoomend moveend", ()=>{
     renderMajorStations();
     renderBathrooms();
