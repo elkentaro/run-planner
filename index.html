@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<meta name="run-planner-version" content="2026.07.30.3">
+<meta name="run-planner-version" content="2026.07.30.4">
 <title>Run Planner Map</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <script data-goatcounter="https://runplanhacker.goatcounter.com/count"
@@ -21,7 +21,7 @@
   .drawer.closed{transform:translateX(var(--panel-shift));}
   .drawer-tab{position:absolute;top:0;right:calc(0px - var(--tab-width));z-index:2;display:flex;align-items:center;justify-content:center;border:1px solid rgba(255,255,255,.75);border-left:0;border-radius:0 22px 22px 0;background:linear-gradient(180deg,#17211b,#1b6f64);color:#fff;width:var(--tab-width);height:var(--tab-height);padding:7px 0 0;font-size:26px;font-weight:900;line-height:1;cursor:pointer;backdrop-filter:blur(14px);}
   .drawer-tab:hover{background:linear-gradient(180deg,#22322a,#16857a);}
-  .panel{position:relative;width:100%;max-height:calc(100dvh - 28px);overflow:auto;border:1px solid rgba(255,255,255,.75);border-radius:0 0 28px 28px;background:rgba(255,254,249,.94);box-shadow:none;backdrop-filter:blur(14px);}
+  .panel{position:relative;width:100%;max-height:calc(100dvh - 82px);overflow:auto;border:1px solid rgba(255,255,255,.75);border-bottom:0;border-radius:0;background:rgba(255,254,249,.94);box-shadow:none;backdrop-filter:blur(14px);}
   .panel-inner{display:grid;gap:12px;padding:23px 14px 14px;}
   .pane-block{display:grid;gap:12px;border:1px solid rgba(219,229,221,.9);border-radius:22px;background:rgba(255,255,255,.76);padding:12px;box-shadow:0 8px 22px rgba(30,45,36,.08);}
   .route-panel{background:linear-gradient(180deg,#fffef9,#f3fbf5);}
@@ -130,13 +130,22 @@
   .bearing-reset-letter{color:#111;font-size:12px;font-weight:900;line-height:1;}
   .site-qr-control{display:block;width:80px;height:80px;padding:5px;border:1px solid rgba(23,33,27,.24);border-radius:4px;background:#fff;box-shadow:0 3px 12px rgba(0,0,0,.2);line-height:0;}
   .site-qr-control img{display:block;width:100%;height:100%;}
+  .journey-panel-control{display:flex;justify-content:flex-end;border:1px solid rgba(255,255,255,.75);border-top:1px solid #dbe5dd;border-radius:0 0 28px 28px;background:rgba(255,254,249,.96);padding:8px 12px 12px;backdrop-filter:blur(14px);}
+  .journey-control{display:flex;align-items:center;gap:7px;border:1px solid rgba(23,33,27,.24);border-radius:4px;background:#fff;padding:6px 8px;color:var(--ink);box-shadow:0 3px 12px rgba(0,0,0,.2);cursor:pointer;}
+  .journey-control-track{position:relative;display:block;width:34px;height:20px;border-radius:999px;background:#bac5bd;transition:background .16s ease;}
+  .journey-control-knob{position:absolute;left:3px;top:3px;width:14px;height:14px;border-radius:50%;background:#fff;box-shadow:0 1px 4px rgba(0,0,0,.3);transition:transform .16s ease;}
+  .journey-control-label{font-size:11px;font-weight:900;white-space:nowrap;}
+  .journey-control.active .journey-control-track{background:#16856f;}
+  .journey-control.active .journey-control-knob{transform:translateX(14px);}
+  .mountain-peak-icon{background:transparent;border:0;}
+  .mountain-peak-glyph{display:flex;align-items:center;justify-content:center;width:24px;height:24px;border:2px solid #fff;border-radius:50%;background:#315b3d;color:#fff;font-size:14px;font-weight:900;line-height:1;box-shadow:0 3px 10px rgba(0,0,0,.3);}
   html[lang="ja"] .btn.primary,html[lang="ja"] .btn.accent,html[lang="ja"] .chip.active,html[lang="ja"] .lang-switch button.active{font-weight:700;text-shadow:0 1px 2px rgba(0,0,0,.24);}
   html[lang="ja"] .btn,html[lang="ja"] .chip{font-weight:700;}
   @media(max-width:700px){
     .drawer{--tab-width:40px;--tab-height:96px;left:0;top:calc(8px + env(safe-area-inset-top));width:calc(100vw - 54px);}
     .drawer::before{border-radius:0;}
     .drawer-tab{border-radius:0 18px 18px 0;font-size:22px;}
-    .panel{max-height:calc(100dvh - 16px - env(safe-area-inset-top) - env(safe-area-inset-bottom));border-radius:0 0 24px 24px;}
+    .panel{max-height:calc(100dvh - 68px - env(safe-area-inset-top) - env(safe-area-inset-bottom));border-radius:0;}
     .panel-inner{gap:10px;padding:19px 10px 10px;}
     .pane-block{gap:10px;border-radius:20px;padding:10px;}
     .topline{align-items:center;}
@@ -149,6 +158,9 @@
     .run-settings input,.run-settings select,.estimate-box,.estimate-value{font-size:14px;}
     .estimate-box{padding:8px;}
     .site-qr-control{width:44px;height:44px;padding:3px;}
+    .journey-panel-control{border-radius:0 0 24px 24px;padding:7px 10px 9px;}
+    .journey-control{gap:5px;padding:5px 6px;}
+    .journey-control-label{font-size:10px;}
   }
 </style>
 </head>
@@ -228,6 +240,12 @@
       </div>
     </div>
   </section>
+  <div class="journey-panel-control">
+    <button class="journey-control" id="journeyModeToggle" type="button" role="switch" aria-checked="false">
+      <span class="journey-control-track" aria-hidden="true"><span class="journey-control-knob"></span></span>
+      <span class="journey-control-label">Journey mode</span>
+    </button>
+  </div>
   <button class="drawer-tab" id="drawerToggle" type="button" aria-expanded="true">
     <span id="drawerToggleText">&lt;</span>
   </button>
@@ -240,7 +258,7 @@ const TARGET_AREAS = ["東京都", "神奈川県", "埼玉県", "千葉県", "�
 const DATA = {locations:[], areas:TARGET_AREAS, counts:{total:0, byBrand:{}, byArea:{}}};
 let MAJOR_STATIONS = [];
 let RUNNER_LOCATIONS = [];
-const APP_VERSION = "2026.07.30.3";
+const APP_VERSION = "2026.07.30.4";
 const DEFAULT_CENTER = {lat:35.685175,lng:139.752800};
 const GSI_TILE_URL = "https://cyberjapandata.gsi.go.jp/xyz/std/{z}/{x}/{y}.png";
 const GSI_ATTRIBUTION = '<a href="https://maps.gsi.go.jp/development/ichiran.html">地理院タイル</a>';
@@ -279,7 +297,11 @@ const CONVENIENCE_META = {
   "7-Eleven": {id:"seven-eleven", url:"./data/seven-eleven.json", minimum:6000, short:"7/11", markerText:"7/11", className:"brand-seven", labels:{en:"7-Eleven", ja:"セブン-イレブン"}}
 };
 const MAJOR_STATION_DATA_URL = "./data/major-stations.json";
+const KANAGAWA_STATION_DATA_URL = "./data/kanagawa-stations.json";
 const ALL_STATIONS_MIN_ZOOM = 14;
+const MOUNTAIN_PEAK_DATA_URL = "./data/mountain-peaks.json";
+const JOURNEY_MODE_STORAGE_KEY = "runPlannerJourneyMode";
+const STATION_PEAK_ATTRIBUTION = '<a href="https://nlftp.mlit.go.jp/ksj/">MLIT station data</a>; <a href="https://www.gsi.go.jp/kihonjohochousa/kihonjohochousa41139.html">GSI mountain data</a>';
 const RUNNER_SHOP_DATA_URL = "./data/runner-shops.json";
 const AREA_LABELS = {
   en: {"東京都":"Tokyo","神奈川県":"Kanagawa","埼玉県":"Saitama","千葉県":"Chiba","栃木県":"Tochigi"},
@@ -306,7 +328,12 @@ const I18N = {
     hidePanel:"Close planner",
     mapElementsLabel:"Map elements",
     areasLabel:"Areas",
-    majorStations:"Major stations",
+    majorStations:"Train stations",
+    journeyMode:"Journey mode",
+    journeyModeOn:"Journey mode on",
+    journeyModeOff:"Journey mode off",
+    mountainPeak:"Mountain peak",
+    elevation:value=>`${value} m elevation`,
     rainRadar:"Rain radar",
     rainRadarLoading:"loading",
     rainRadarLoadFailed:"unavailable",
@@ -414,7 +441,12 @@ const I18N = {
     hidePanel:"プランナーを閉じる",
     mapElementsLabel:"地図要素",
     areasLabel:"エリア",
-    majorStations:"主要駅",
+    majorStations:"鉄道駅",
+    journeyMode:"旅モード",
+    journeyModeOn:"旅モードをオンにしました",
+    journeyModeOff:"旅モードをオフにしました",
+    mountainPeak:"山頂",
+    elevation:value=>`標高 ${value} m`,
     rainRadar:"雨雲レーダー",
     rainRadarLoading:"読込中",
     rainRadarLoadFailed:"利用不可",
@@ -524,6 +556,7 @@ const state = {
   lang:localStorage.getItem("runPlannerLang") === "ja" ? "ja" : "en",
   routeMode:"empty",
   routePoints:[],
+  journeyMode:false,
   drawZoomRestore:null,
   lastStatusKey:"clickPrompt",
   lastStatusArgs:[]
@@ -541,7 +574,13 @@ let rainRadarTileUrl = "";
 let rainRadarLoadPromise = null;
 let rainRadarRefreshTimer = null;
 let rainRadarRedrawTimer = null;
-let map, centerMarker, routeCircle, markerLayer, convenienceLayer, bathroomLayer, cyclePortLayer, majorStationLayer, drawnRouteLine, routePointLayer, routeDistancePopupTimer, routeVisualOverlay, routeVisualPath, routeVisualFrame, bearingResetControl, bearingResetButton, siteQrControl, siteQrLink;
+let KANAGAWA_STATIONS = [];
+let ALL_STATIONS = [];
+let mountainPeakData = null;
+let mountainPeakLoadPromise = null;
+let kanagawaStationStatus = "loading";
+let journeyPreviousFilters = null;
+let map, centerMarker, routeCircle, markerLayer, convenienceLayer, bathroomLayer, cyclePortLayer, majorStationLayer, mountainPeakLayer, drawnRouteLine, routePointLayer, routeDistancePopupTimer, routeVisualOverlay, routeVisualPath, routeVisualFrame, bearingResetControl, bearingResetButton, siteQrControl, siteQrLink, journeyControl, journeyControlButton, stationCanvasRenderer, bathroomCanvasRenderer;
 
 const locationInput = document.getElementById("locationInput");
 const radiusInput = document.getElementById("radiusInput");
@@ -707,6 +746,31 @@ function updateDataSummary(){
   if(sourceLabel) sourceLabel.textContent = `${DATA.locations.length} ${t("stores")}`;
 }
 
+function rebuildAllStations(){
+  const baseStations = MAJOR_STATIONS.map(station=>({...station}));
+  const combined = [...baseStations];
+  for(const station of KANAGAWA_STATIONS){
+    const duplicate = baseStations.find(existing=>{
+      const sameName = (existing.nameJa || existing.name) === (station.nameJa || station.name);
+      if(!sameName) return false;
+      return Math.abs(existing.lat - station.lat) < .018 && Math.abs(existing.lng - station.lng) < .018;
+    });
+    if(duplicate){
+      duplicate.isMajor = Boolean(duplicate.isMajor || station.isMajor);
+      duplicate.lines = Array.from(new Set([...(duplicate.lines || []), ...(station.lines || [])]));
+    }else{
+      combined.push(station);
+    }
+  }
+  ALL_STATIONS = combined;
+}
+
+function combinedStationStatus(){
+  if(majorStationStatus === "loading" || kanagawaStationStatus === "loading") return "loading";
+  if(majorStationStatus === "error" && kanagawaStationStatus === "error") return "error";
+  return "ready";
+}
+
 function loadMajorStations(){
   majorStationStatus = "loading";
   return fetchJson(MAJOR_STATION_DATA_URL)
@@ -722,13 +786,41 @@ function loadMajorStations(){
       }
       MAJOR_STATIONS = stations;
       majorStationStatus = "ready";
+      rebuildAllStations();
       renderMajorStations();
       renderFilters();
     })
     .catch(()=>{
       MAJOR_STATIONS = [];
       majorStationStatus = "error";
-      state.showMajorStations = false;
+      rebuildAllStations();
+      renderFilters();
+    });
+}
+
+function loadKanagawaStations(){
+  kanagawaStationStatus = "loading";
+  return fetchJson(KANAGAWA_STATION_DATA_URL)
+    .then(data=>{
+      const stations = Array.isArray(data.stations) ? data.stations.filter(validLocationItem) : [];
+      if(
+        !Array.isArray(data.stations) ||
+        stations.length !== data.stations.length ||
+        stations.length < 330 ||
+        Number(data.counts && data.counts.total) !== stations.length
+      ){
+        throw new Error("incomplete or invalid Kanagawa station dataset");
+      }
+      KANAGAWA_STATIONS = stations;
+      kanagawaStationStatus = "ready";
+      rebuildAllStations();
+      renderMajorStations();
+      renderFilters();
+    })
+    .catch(()=>{
+      KANAGAWA_STATIONS = [];
+      kanagawaStationStatus = "error";
+      rebuildAllStations();
       renderFilters();
     });
 }
@@ -753,6 +845,7 @@ function loadInitialLocationData(){
   const primaryLoads = Object.entries(BRAND_META).map(([brand, meta])=>loadStoreSource(brand, meta));
   Promise.all(primaryLoads).then(()=>renderMarkers(true));
   loadMajorStations();
+  loadKanagawaStations();
   loadRunnerShops();
 }
 
@@ -876,6 +969,68 @@ function addSiteQrControl(){
   });
   siteQrControl = new SiteQrControl();
   siteQrControl.addTo(map);
+}
+
+function updateJourneyControl(){
+  if(!journeyControlButton) return;
+  journeyControlButton.classList.toggle("active", state.journeyMode);
+  journeyControlButton.setAttribute("aria-checked", state.journeyMode ? "true" : "false");
+  journeyControlButton.setAttribute("aria-label", t("journeyMode"));
+  journeyControlButton.title = t("journeyMode");
+  const label = journeyControlButton.querySelector(".journey-control-label");
+  if(label) label.textContent = t("journeyMode");
+}
+
+function setJourneyMode(enabled, {persist=true, announce=true}={}){
+  const next = Boolean(enabled);
+  if(next === state.journeyMode) return;
+  if(next){
+    journeyPreviousFilters = {
+      brands:new Set(state.brands),
+      convenienceBrands:new Set(state.convenienceBrands),
+      showBathrooms:state.showBathrooms,
+      showCyclePorts:state.showCyclePorts,
+      showRainRadar:state.showRainRadar,
+      showMajorStations:state.showMajorStations
+    };
+    state.journeyMode = true;
+    state.brands.clear();
+    state.convenienceBrands.clear();
+    state.showCyclePorts = false;
+    setRainRadarEnabled(false, {persist:false});
+  }else{
+    state.journeyMode = false;
+    if(journeyPreviousFilters){
+      state.brands = new Set(journeyPreviousFilters.brands);
+      state.convenienceBrands = new Set(journeyPreviousFilters.convenienceBrands);
+      state.showBathrooms = journeyPreviousFilters.showBathrooms;
+      state.showCyclePorts = journeyPreviousFilters.showCyclePorts;
+      state.showMajorStations = journeyPreviousFilters.showMajorStations;
+      setRainRadarEnabled(journeyPreviousFilters.showRainRadar, {persist:false});
+    }
+    journeyPreviousFilters = null;
+  }
+  if(persist) localStorage.setItem(JOURNEY_MODE_STORAGE_KEY, state.journeyMode ? "1" : "0");
+  updateJourneyControl();
+  renderMarkers(false);
+  renderConvenienceStores(false);
+  renderCyclePorts(false);
+  renderMajorStations();
+  renderBathrooms();
+  renderMountainPeaks();
+  renderFilters();
+  if(announce) setStatusKey(state.journeyMode ? "journeyModeOn" : "journeyModeOff");
+}
+
+function addJourneyControl(){
+  if(journeyControlButton) return;
+  const button = document.getElementById("journeyModeToggle");
+  button.addEventListener("click", ()=>{
+    setJourneyMode(!state.journeyMode);
+  });
+  journeyControl = button;
+  journeyControlButton = button;
+  updateJourneyControl();
 }
 
 function renderRouteVisual(){
@@ -1584,6 +1739,81 @@ function cyclePortIcon(){
   });
 }
 
+function mountainPeakIcon(){
+  return L.divIcon({
+    className:"mountain-peak-icon",
+    html:'<span class="mountain-peak-glyph" aria-hidden="true">▲</span>',
+    iconSize:[24,24],
+    iconAnchor:[12,12],
+    popupAnchor:[0,-12]
+  });
+}
+
+function mountainPeakLocation(item){
+  const query = `${item.lat.toFixed(7)},${item.lng.toFixed(7)}`;
+  return {
+    id:item.id,
+    name:state.lang === "ja" ? item.nameJa || item.name : item.nameEn || item.name,
+    lat:item.lat,
+    lng:item.lng,
+    address:item.pref || "",
+    note:t("elevation", item.elevation),
+    mapUrl:`https://www.google.com/maps/search/?api=1&query=${query}`
+  };
+}
+
+function ensureMountainPeaksLoaded(){
+  if(mountainPeakData) return Promise.resolve(mountainPeakData);
+  if(!mountainPeakLoadPromise){
+    mountainPeakLoadPromise = fetchJson(MOUNTAIN_PEAK_DATA_URL)
+      .then(data=>{
+        const peaks = Array.isArray(data.peaks) ? data.peaks.filter(validLocationItem) : [];
+        if(
+          !Array.isArray(data.peaks) ||
+          peaks.length !== data.peaks.length ||
+          peaks.length < 100 ||
+          peaks.length > 200 ||
+          Number(data.counts && data.counts.total) !== peaks.length
+        ){
+          throw new Error("incomplete or invalid mountain-peak dataset");
+        }
+        mountainPeakData = {...data, peaks};
+        return mountainPeakData;
+      })
+      .finally(()=>{ mountainPeakLoadPromise = null; });
+  }
+  return mountainPeakLoadPromise;
+}
+
+function renderMountainPeaks(){
+  if(!mountainPeakLayer || !map) return;
+  mountainPeakLayer.clearLayers();
+  if(!state.journeyMode) return;
+  if(!mountainPeakData){
+    ensureMountainPeaksLoaded()
+      .then(renderMountainPeaks)
+      .catch(()=>{});
+    return;
+  }
+  const bounds = map.getBounds().pad(0.08);
+  for(const item of mountainPeakData.peaks.filter(peak=>bounds.contains([peak.lat, peak.lng]))){
+    const location = mountainPeakLocation(item);
+    const marker = L.marker([location.lat, location.lng], {
+      icon:mountainPeakIcon(),
+      title:location.name,
+      zIndexOffset:600
+    });
+    marker.on("click", event=>{
+      if(addLocationWaypoint(location)){
+        if(event.originalEvent) L.DomEvent.stop(event.originalEvent);
+        return;
+      }
+      marker.bindPopup(popupElement(location)).openPopup();
+    });
+    marker.addTo(mountainPeakLayer);
+  }
+}
+
 function bathroomTagValue(value){
   const text = String(value || "").trim();
   const normalized = text.toLowerCase();
@@ -1659,28 +1889,33 @@ function ensureBathroomsLoaded(){
 }
 
 function visibleBathrooms(){
-  if(!state.showBathrooms || !bathroomData || !map || map.getZoom() < BATHROOM_MIN_ZOOM) return [];
+  const enabled = state.journeyMode || state.showBathrooms;
+  if(!enabled || !bathroomData || !map || (!state.journeyMode && map.getZoom() < BATHROOM_MIN_ZOOM)) return [];
   const bounds = map.getBounds().pad(0.03);
-  return bathroomData.toilets
-    .filter(item=>bounds.contains([item.lat, item.lng]))
-    .slice(0, BATHROOM_MARKER_LIMIT);
+  const visible = bathroomData.toilets.filter(item=>bounds.contains([item.lat, item.lng]));
+  return state.journeyMode ? visible : visible.slice(0, BATHROOM_MARKER_LIMIT);
 }
 
 function renderBathrooms(updateFilters=true){
   if(!bathroomLayer || !map) return;
   bathroomLayer.clearLayers();
   state.bathroomCount = 0;
-  if(!state.showBathrooms){
+  const enabled = state.journeyMode || state.showBathrooms;
+  if(!enabled){
     if(state.bathroomStatus !== "error") state.bathroomStatus = bathroomData ? "ready" : "idle";
     if(updateFilters) renderFilters();
     return;
   }
-  if(map.getZoom() < BATHROOM_MIN_ZOOM){
+  if(!state.journeyMode && map.getZoom() < BATHROOM_MIN_ZOOM){
     state.bathroomStatus = bathroomData ? "ready" : "idle";
     if(updateFilters) renderFilters();
     return;
   }
   if(!bathroomData){
+    if(state.bathroomStatus === "error"){
+      if(updateFilters) renderFilters();
+      return;
+    }
     ensureBathroomsLoaded()
       .then(()=>renderBathrooms(updateFilters))
       .catch(()=>{
@@ -1697,6 +1932,18 @@ function renderBathrooms(updateFilters=true){
   state.bathroomStatus = "ready";
   for(const item of items){
     const location = bathroomLocation(item);
+    if(state.journeyMode && map.getZoom() < BATHROOM_MIN_ZOOM){
+      L.circleMarker([location.lat, location.lng], {
+        renderer:bathroomCanvasRenderer,
+        radius:2.5,
+        color:"#fff",
+        weight:1,
+        fillColor:"#0f766e",
+        fillOpacity:.92,
+        interactive:false
+      }).addTo(bathroomLayer);
+      continue;
+    }
     const marker = L.marker([location.lat, location.lng], {
       icon:bathroomIcon(),
       title:location.name,
@@ -1918,12 +2165,12 @@ function renderConvenienceStores(updateStatus=false){
 }
 
 function visibleMajorStations(){
-  if(!state.showMajorStations || !map) return [];
+  if((!state.journeyMode && !state.showMajorStations) || !map) return [];
   const bounds = map.getBounds().pad(0.2);
   const zoom = map.getZoom();
-  const stations = zoom >= ALL_STATIONS_MIN_ZOOM
-    ? MAJOR_STATIONS
-    : MAJOR_STATIONS.filter(station=>station.isMajor);
+  const stations = state.journeyMode || zoom >= ALL_STATIONS_MIN_ZOOM
+    ? ALL_STATIONS
+    : ALL_STATIONS.filter(station=>station.isMajor);
   return stations.filter(station=>bounds.contains([station.lat, station.lng]));
 }
 
@@ -1931,6 +2178,18 @@ function renderMajorStations(){
   if(!majorStationLayer) return;
   majorStationLayer.clearLayers();
   for(const station of visibleMajorStations()){
+    if(state.journeyMode && map.getZoom() < ALL_STATIONS_MIN_ZOOM){
+      L.circleMarker([station.lat, station.lng], {
+        renderer:stationCanvasRenderer,
+        radius:3,
+        color:"#fff",
+        weight:1,
+        fillColor:"#111",
+        fillOpacity:.95,
+        interactive:false
+      }).addTo(majorStationLayer);
+      continue;
+    }
     L.marker([station.lat, station.lng], {
       icon:majorStationIcon(station),
       interactive:false,
@@ -1955,10 +2214,12 @@ function renderMarkers(updateStatus=true){
     });
     marker.addTo(markerLayer);
   }
-  for(const location of RUNNER_LOCATIONS){
-    L.marker([location.lat, location.lng], {icon:runnerIcon(), title:location.name})
-      .bindPopup(popupElement(location))
-      .addTo(markerLayer);
+  if(!state.journeyMode){
+    for(const location of RUNNER_LOCATIONS){
+      L.marker([location.lat, location.lng], {icon:runnerIcon(), title:location.name})
+        .bindPopup(popupElement(location))
+        .addTo(markerLayer);
+    }
   }
   if(updateStatus) setStatusKey("visibleStatus", items.length, (DATA.locations || []).length);
 }
@@ -2145,9 +2406,9 @@ async function refreshRainRadar(silent=false){
   return rainRadarLoadPromise;
 }
 
-function setRainRadarEnabled(enabled){
+function setRainRadarEnabled(enabled, {persist=true}={}){
   state.showRainRadar = Boolean(enabled);
-  localStorage.setItem(RAIN_RADAR_STORAGE_KEY, state.showRainRadar ? "1" : "0");
+  if(persist) localStorage.setItem(RAIN_RADAR_STORAGE_KEY, state.showRainRadar ? "1" : "0");
   if(state.showRainRadar){
     refreshRainRadar();
     scheduleRainRadarRefresh();
@@ -2173,7 +2434,7 @@ function bathroomElementCount(){
   if(!bathroomZoomAvailable()) return t("bathroomZoomPrompt", BATHROOM_MIN_ZOOM);
   if(state.bathroomStatus === "loading") return t("bathroomLoading");
   if(state.bathroomStatus === "error") return t("bathroomLoadFailed");
-  if(!state.showBathrooms) return "";
+  if(!state.journeyMode && !state.showBathrooms) return "";
   return state.bathroomCount;
 }
 
@@ -2202,7 +2463,7 @@ function convenienceZoomAvailable(){
 }
 
 function bathroomZoomAvailable(){
-  return Boolean(map && map.getZoom() >= BATHROOM_MIN_ZOOM);
+  return Boolean(map && (state.journeyMode || map.getZoom() >= BATHROOM_MIN_ZOOM));
 }
 
 function cyclePortZoomAvailable(){
@@ -2215,9 +2476,9 @@ function renderMapElementFilters(){
   mapElementFilters.appendChild(mapElementButton({
     code:state.lang === "ja" ? "駅" : "ST",
     name:t("majorStations"),
-    count:sourceElementCount(majorStationStatus, MAJOR_STATIONS.length),
-    checked:state.showMajorStations,
-    disabled:majorStationStatus === "error",
+    count:sourceElementCount(combinedStationStatus(), ALL_STATIONS.length),
+    checked:state.journeyMode || state.showMajorStations,
+    disabled:state.journeyMode || combinedStationStatus() === "error",
     dotClass:"station-dot",
     onChange:checked=>{
       state.showMajorStations = checked;
@@ -2265,8 +2526,8 @@ function renderMapElementFilters(){
     code:BATHROOM_EMOJI,
     name:t("publicBathrooms"),
     count:bathroomElementCount(),
-    checked:state.showBathrooms && bathroomAvailable,
-    disabled:!bathroomAvailable || state.bathroomStatus === "error",
+    checked:state.journeyMode || (state.showBathrooms && bathroomAvailable),
+    disabled:state.journeyMode || !bathroomAvailable || state.bathroomStatus === "error",
     dotClass:"bathroom-dot",
     onChange:checked=>{
       state.showBathrooms = checked;
@@ -2382,6 +2643,7 @@ function applyLanguage(){
   document.getElementById("areasLabel").textContent = t("areasLabel");
   updateBearingResetControl();
   updateSiteQrControl();
+  updateJourneyControl();
   updateZoomIndicator();
   document.querySelector(".route-draw-controls").setAttribute("aria-label", t("routeDrawLabel"));
   document.getElementById("routeDrawFootnote").textContent = t("routeDrawFootnote");
@@ -2394,6 +2656,7 @@ function applyLanguage(){
   renderConvenienceStores(false);
   renderBathrooms(false);
   renderCyclePorts(false);
+  renderMountainPeaks();
   updateRoute(false);
 }
 
@@ -2420,15 +2683,20 @@ function init(){
   rainRadarPane.style.pointerEvents = "none";
   addRouteVisualOverlay();
   addBearingResetControl();
+  addJourneyControl();
   addSiteQrControl();
   if(map.attributionControl) map.attributionControl.addAttribution(BATHROOM_ATTRIBUTION);
   if(map.attributionControl) map.attributionControl.addAttribution(CYCLE_PORT_ATTRIBUTION);
+  if(map.attributionControl) map.attributionControl.addAttribution(STATION_PEAK_ATTRIBUTION);
   const majorStationPane = map.createPane("majorStationPane");
   majorStationPane.style.zIndex = "680";
   majorStationPane.style.pointerEvents = "none";
+  stationCanvasRenderer = L.canvas({pane:"majorStationPane", padding:0.5});
+  bathroomCanvasRenderer = L.canvas({padding:0.5});
   majorStationLayer = L.layerGroup().addTo(map);
   bathroomLayer = L.layerGroup().addTo(map);
   cyclePortLayer = L.layerGroup().addTo(map);
+  mountainPeakLayer = L.layerGroup().addTo(map);
   convenienceLayer = L.layerGroup().addTo(map);
   markerLayer = L.layerGroup().addTo(map);
   routeCircle = L.circle([state.lat, state.lng], {radius:state.radiusKm * 1000, color:"#1f8fff", weight:3, dashArray:"8 9", fillColor:"#22c55e", fillOpacity:.12}).addTo(map);
@@ -2459,13 +2727,18 @@ function init(){
     renderBathrooms();
     renderCyclePorts(state.showCyclePorts);
     renderConvenienceStores(state.convenienceBrands.size > 0);
+    renderMountainPeaks();
   });
+  if(localStorage.getItem(JOURNEY_MODE_STORAGE_KEY) === "1"){
+    setJourneyMode(true, {persist:false, announce:false});
+  }
   applyLanguage();
   updateDrawerShift();
   setDrawerOpen(true);
   renderMajorStations();
   renderBathrooms();
   renderCyclePorts(false);
+  renderMountainPeaks();
   renderConvenienceStores(false);
   renderMarkers(!restoredRoute);
   loadInitialLocationData();

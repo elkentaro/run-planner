@@ -80,6 +80,8 @@ Independent snapshots and generators:
 | `data/familymart.json` | `scripts/generate_familymart.py` |
 | `data/seven-eleven.json` | `scripts/generate_seven_eleven.py` |
 | `data/major-stations.json` | `scripts/generate_major_stations.py` |
+| `data/kanagawa-stations.json` | `scripts/generate_kanagawa_stations.py` |
+| `data/mountain-peaks.json` | `scripts/generate_mountain_peaks.py` |
 | `data/public-toilets.json` | `scripts/generate_public_toilets.py` |
 | `data/docomo-cycle-ports.json` | `scripts/download_docomo_cycle_ports.py` |
 | `data/runner-shops.json` | `scripts/generate_runner_shops.py` |
@@ -124,11 +126,18 @@ Use:
   file. Exported geometry uses the same direct-line points shown on the map and
   includes GPX 1.1 route and track data for broader app compatibility.
 - Use `Map elements` / `地図要素` to toggle curated locations, convenience
-  stores, major stations, public bathrooms, Docomo cycle ports, and live rain
+  stores, train stations, public bathrooms, Docomo cycle ports, and live rain
   radar from one list.
 - Area filters sit below map elements and reduce visible store markers.
 - Convenience-store markers are off by default. Turn on `Family Mart` or `7/11` at zoom level 14 or closer.
-- Toggle `Major stations` to show or hide small black landmark labels for roughly 100 high-traffic stations in the supported areas.
+- Toggle `Train stations` to show major Tokyo and Kanagawa stations at regional
+  zoom levels and every station in the static datasets at zoom level 14 or
+  closer.
+- Toggle `Journey mode` in the planner panel's lower-right corner to force all
+  static train stations and public toilets on at every zoom level and show the
+  GSI mountain peak set. Other location types are switched off on entry but
+  remain manually selectable; leaving Journey mode restores the previous
+  filters.
 - Toggle `🚾 Public bathrooms` to show public-toilet markers from OpenStreetMap.
   They appear at zoom level 15 or closer, and can be clicked while drawing a
   route to add the bathroom as a waypoint or goal.

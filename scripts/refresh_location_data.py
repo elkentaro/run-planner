@@ -37,6 +37,14 @@ SOURCES = (
     Source("familymart", "generate_familymart.py", "data/familymart.json", "locations", 4000),
     Source("seven-eleven", "generate_seven_eleven.py", "data/seven-eleven.json", "locations", 6000),
     Source("major-stations", "generate_major_stations.py", "data/major-stations.json", "stations", 160),
+    Source(
+        "kanagawa-stations",
+        "generate_kanagawa_stations.py",
+        "data/kanagawa-stations.json",
+        "stations",
+        330,
+    ),
+    Source("mountain-peaks", "generate_mountain_peaks.py", "data/mountain-peaks.json", "peaks", 100),
     Source("public-toilets", "generate_public_toilets.py", "data/public-toilets.json", "toilets", 1),
     Source(
         "docomo-cycle-ports",
